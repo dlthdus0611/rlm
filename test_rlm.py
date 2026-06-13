@@ -215,3 +215,27 @@ def test_graph_llm_query_batched_preserves_order():
     graph = build_rlm_graph(root, FakeSub(reply="x"), max_iterations=5)
     result = graph.invoke({"question": "q", "context": "c", "depth": 0})
     assert result["final_answer"] == "3"
+
+
+def test_rlm_query_falls_back_to_llm_at_depth_limit():
+    # max_depth=0: 루트(depth 0)의 rlm_query는 next_depth=1 > 0 이라 llm_query 폴백.
+    root = FakeChat([
+        '```repl\nr = rlm_query("하위 질문", "하위 컨텍스트")\n'
+        'answer["content"] = r\nanswer["ready"] = True\n```'
+    ])
+    graph = build_rlm_graph(root, FakeSub(reply="폴백답"), max_depth=0, max_iterations=5)
+    result = graph.invoke({"question": "q", "context": "c", "depth": 0})
+    assert result["final_answer"] == "폴백답"
+
+
+def test_rlm_query_recurses_when_allowed():
+    # max_depth=1: 루트의 rlm_query는 자식 그래프를 depth=1로 invoke.
+    # 부모/자식이 같은 root_llm을 쓰므로 응답 시퀀스를 합쳐 설계.
+    root = FakeChat([
+        '```repl\nr = rlm_query("자식아 풀어", "자식 컨텍스트")\n'
+        'answer["content"] = "부모가 받은: " + r\nanswer["ready"] = True\n```',
+        '```repl\nanswer["content"] = "자식답"\nanswer["ready"] = True\n```',
+    ])
+    graph = build_rlm_graph(root, FakeSub(), max_depth=1, max_iterations=5)
+    result = graph.invoke({"question": "q", "context": "c", "depth": 0})
+    assert result["final_answer"] == "부모가 받은: 자식답"
