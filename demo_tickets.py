@@ -12,7 +12,7 @@ from rlm_graph import run
 load_dotenv()  # 루트의 .env 에서 OPENROUTER_API_KEY 등을 환경변수로 로드
 
 CAUSES = ["배송 지연", "품질 불량", "단순 변심"]
-SUBJECTS = ["주문 문의", "계정 문제", "환불 요청", "배송 추적", "제품 사용법"]
+SUBJECTS = ["주문 문의", "계정 문제", "주소 변경", "배송 추적", "제품 사용법"]
 
 
 def make_tickets(n: int = 60, seed: int = 42):
@@ -35,7 +35,7 @@ def make_tickets(n: int = 60, seed: int = 42):
             subject = rng.choice(SUBJECTS)
             body = (
                 f"안녕하세요, 주문 #{1000 + i} 관련 {subject}입니다. "
-                f"확인 부탁드립니다. (환불과는 무관한 일반 문의)"
+                f"확인 부탁드립니다."
             )
         tickets.append(f"=== 티켓 #{i} ===\n{body}")
     context = "\n\n".join(tickets)
