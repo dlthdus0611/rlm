@@ -43,8 +43,13 @@ python demo_tickets.py
 | 학습/compaction | 있음 | 없음 |
 
 ## 구조
-- `rlm_graph.py` — 핵심 (그래프, REPL, parse, run)
-- `prompts.py` — 한글 프롬프트
+- `rlm/` — 패키지
+  - `parsing.py` — 코드 블록 파싱 / 출력 축약
+  - `repl.py` — 코드 실행 샌드박스(REPL)
+  - `graph.py` — LangGraph 제어 루프
+  - `llm.py` — OpenRouter LLM 팩토리
+  - `api.py` — 공개 진입점 `run()`
+  - `prompts.py` — 한글 프롬프트
+- `tests/` — 모듈별 단위/그래프 테스트
 - `demo_tickets.py` — 데모
-- `test_rlm.py` — 테스트
 - `docs/` — 설계 spec, 프롬프트 참고, 본 계획
