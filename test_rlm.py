@@ -127,3 +127,61 @@ def test_turn_prompt_later_iteration_is_short():
     msg = build_turn_prompt(3, 10)
     assert "턴 4/10" in msg
     assert "먼저 context" not in msg
+
+
+from langchain_core.messages import AIMessage
+from rlm_graph import build_rlm_graph
+
+
+class FakeChat:
+    """미리 정한 응답 문자열을 순서대로 반환하는 가짜 채팅 모델."""
+
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.i = 0
+        self.invocations = []
+
+    def invoke(self, messages):
+        self.invocations.append(messages)
+        idx = min(self.i, len(self.responses) - 1)
+        self.i += 1
+        return AIMessage(content=self.responses[idx])
+
+    def batch(self, prompts, config=None):
+        return [AIMessage(content=f"분류:{p[:8]}") for p in prompts]
+
+
+class FakeSub:
+    """llm_query/llm_query_batched가 호출하는 sub 모델. 고정 응답."""
+
+    def __init__(self, reply="고정응답"):
+        self.reply = reply
+
+    def invoke(self, prompt):
+        return AIMessage(content=self.reply)
+
+    def batch(self, prompts, config=None):
+        return [AIMessage(content=self.reply) for _ in prompts]
+
+
+def test_graph_single_turn_answer():
+    root = FakeChat([
+        '계획: 바로 답합니다.\n```repl\nanswer["content"] = "정답 42"\nanswer["ready"] = True\n```'
+    ])
+    graph = build_rlm_graph(root, FakeSub(), max_iterations=5)
+    result = graph.invoke({"question": "q", "context": "ctx", "depth": 0})
+    assert result["final_answer"] == "정답 42"
+
+
+def test_graph_context_not_in_model_messages():
+    big_context = "비밀본문" * 100
+    root = FakeChat([
+        '```repl\nanswer["content"] = "done"\nanswer["ready"] = True\n```'
+    ])
+    graph = build_rlm_graph(root, FakeSub(), max_iterations=5)
+    graph.invoke({"question": "q", "context": big_context, "depth": 0})
+    first_call_text = " ".join(
+        m.content for m in root.invocations[0] if isinstance(m.content, str)
+    )
+    assert "비밀본문" not in first_call_text
+    assert "q" in first_call_text
