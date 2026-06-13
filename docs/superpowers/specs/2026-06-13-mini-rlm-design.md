@@ -42,6 +42,8 @@ RLM은 본질적으로 "모델이 코드 생성 → REPL 실행 → 축약 stdou
 
 ### 4.2 노드
 1. **`setup`** (진입): `REPL` 생성 → `context` 적재, `llm_query`/`rlm_query`/`answer`/`SHOW_VARS` 네임스페이스 주입. 초기 `messages = [SystemMessage(시스템프롬프트), HumanMessage(메타데이터+question)]` 구성. 반환 `{messages, repl, iteration: 0}`.
+   - **프롬프트는 원본 repo를 최대한 그대로 사용**한다. 시스템 프롬프트 = (적응판 `RLM_SYSTEM_PROMPT`) + (적응판 `ORCHESTRATOR_ADDENDUM`). 메타데이터·턴 프롬프트도 동일. 전문은 `docs/prompts-reference.md` 참고(원본 verbatim + 우리 적응판 §4 모두 수록). 적응 = `*_batched`·커스텀툴 제거, 20K→8K, `context`=str.
+   - 턴 프롬프트(`"Turn {i+1}/{max_iterations}:"`, 턴 0 안전장치 포함)는 `call_model` 직전에 user 메시지로 추가한다(원본 `build_user_prompt`와 동일 취지).
 2. **`call_model`**: 루트 `ChatOpenAI`로 `state["messages"]` 호출 → `{messages: [AIMessage]}`.
 3. **`execute_code`**: 마지막 AIMessage에서 ```` ```repl ```` 블록 파싱 → 각 블록 `repl.run` → stdout을 `MAX_OUTPUT_CHARS(=8000)`에서 truncate(`"...[+N chars]"`) → `{messages: [HumanMessage(피드백)], iteration: state["iteration"]+1, final_answer?}`. `iteration`은 reducer 없는 필드라 **기존값+1을 계산해 덮어쓰기**(reducer 함정 회피). 코드 블록 0개면 "```repl``` 블록으로 작성하라" 안내를 피드백으로.
 
