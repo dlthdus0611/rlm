@@ -44,7 +44,7 @@ RLM은 본질적으로 "모델이 코드 생성 → REPL 실행 → 축약 stdou
 
 ### 4.2 노드
 1. **`setup`** (진입): `REPL` 생성 → `context` 적재, `llm_query`/`rlm_query`/`answer`/`SHOW_VARS` 네임스페이스 주입. 초기 `messages = [SystemMessage(시스템프롬프트), HumanMessage(메타데이터+question)]` 구성. 반환 `{messages, repl, iteration: 0}`.
-   - **프롬프트는 원본 repo를 최대한 그대로 사용**한다. 시스템 프롬프트 = (적응판 `RLM_SYSTEM_PROMPT`) + (적응판 `ORCHESTRATOR_ADDENDUM`). 메타데이터·턴 프롬프트도 동일. 전문은 `docs/prompts-reference.md` 참고(원본 verbatim + 우리 적응판 §4 모두 수록). 적응 = `*_batched`·커스텀툴 제거, 20K→8K, `context`=str.
+   - **프롬프트는 원본 repo 구조를 최대한 따르되, 코드가 실제 사용하는 문구는 한글로 작성**한다. 시스템 프롬프트 = (적응판 `RLM_SYSTEM_PROMPT` 한글) + (적응판 `ORCHESTRATOR_ADDENDUM` 한글). 메타데이터·턴 프롬프트도 한글. 전문은 `docs/prompts-reference.md` 참고(§1~3 원본 영어 verbatim, §4 우리 한글 적응판). 코드 식별자(`context`/`llm_query`/`answer["ready"]`/```` ```repl ```` 등)는 번역하지 않음. 적응 = `rlm_query_batched`·커스텀툴 제거, 20K→8K, `context`=str.
    - 턴 프롬프트(`"Turn {i+1}/{max_iterations}:"`, 턴 0 안전장치 포함)는 `call_model` 직전에 user 메시지로 추가한다(원본 `build_user_prompt`와 동일 취지).
 2. **`call_model`**: 루트 `ChatOpenAI`로 `state["messages"]` 호출 → `{messages: [AIMessage]}`.
 3. **`execute_code`**: 마지막 AIMessage에서 ```` ```repl ```` 블록 파싱 → 각 블록 `repl.run` → stdout을 `MAX_OUTPUT_CHARS(=8000)`에서 truncate(`"...[+N chars]"`) → `{messages: [HumanMessage(피드백)], iteration: state["iteration"]+1, final_answer?}`. `iteration`은 reducer 없는 필드라 **기존값+1을 계산해 덮어쓰기**(reducer 함정 회피). 코드 블록 0개면 "```repl``` 블록으로 작성하라" 안내를 피드백으로.
@@ -85,8 +85,8 @@ invoke({question, context, depth=0})
 
 "문서가 거대하지 않아도 전수 집계는 RLM이 빛난다"는 두 번째 축을 보여주는 예제.
 
-- **데이터**: N개(기본 60) 가짜 지원 티켓 합성. 각 티켓에 (a) 환불 언급 여부, (b) 원인(배송지연/품질불량/단순변심/해당없음). 정답 카운트를 생성 시점 기록(채점용). `random.seed` 고정.
-- **질문**: "환불을 언급한 티켓 수와, 그중 '배송 지연'이 원인인 수."
+- **데이터**: N개(기본 60) 가짜 지원 티켓 합성(프롬프트와 일관되게 **한글 티켓**). 각 티켓에 (a) 환불 언급 여부, (b) 원인(배송지연/품질불량/단순변심/해당없음). 정답 카운트를 생성 시점 기록(채점용). `random.seed` 고정.
+- **질문**: "환불을 언급한 티켓 수와, 그중 '배송 지연'이 원인인 수." (한글)
 - **기대 동작**: 루트가 `context`를 티켓 단위 split → `llm_query_batched`로 티켓들을 병렬 분류(또는 `for` 루프 `llm_query`) → 집계 → `answer` 반환.
 - **출력**: 모델 답 vs 실제 정답, 일치 여부, 사용 턴 수. (LangSmith 켜져 있으면 트레이스 URL.)
 
