@@ -5,7 +5,11 @@
 """
 import random
 
+from dotenv import load_dotenv
+
 from rlm_graph import run
+
+load_dotenv()  # 루트의 .env 에서 OPENROUTER_API_KEY 등을 환경변수로 로드
 
 CAUSES = ["배송 지연", "품질 불량", "단순 변심"]
 SUBJECTS = ["주문 문의", "계정 문제", "환불 요청", "배송 추적", "제품 사용법"]
