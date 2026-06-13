@@ -239,3 +239,23 @@ def test_rlm_query_recurses_when_allowed():
     graph = build_rlm_graph(root, FakeSub(), max_depth=1, max_iterations=5)
     result = graph.invoke({"question": "q", "context": "c", "depth": 0})
     assert result["final_answer"] == "부모가 받은: 자식답"
+
+
+def test_graph_terminates_at_max_iterations_without_answer():
+    # 모델이 절대 answer를 세팅하지 않음 -> max_iterations 에서 종료, final_answer None
+    root = FakeChat(['```repl\nprint("계속 탐색만")\n```'])  # 항상 같은 응답
+    graph = build_rlm_graph(root, FakeSub(), max_iterations=3)
+    result = graph.invoke({"question": "q", "context": "c", "depth": 0})
+    assert result.get("final_answer") is None
+    assert result["iteration"] == 3
+
+
+import os
+import pytest
+from rlm_graph import make_llm
+
+
+def test_make_llm_requires_api_key(monkeypatch):
+    monkeypatch.delenv("OPENROUTER_API_KEY", raising=False)
+    with pytest.raises(RuntimeError, match="OPENROUTER_API_KEY"):
+        make_llm("openai/gpt-4o-mini")

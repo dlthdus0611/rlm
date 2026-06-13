@@ -1,4 +1,5 @@
 import io
+import os
 import re
 import traceback
 from contextlib import redirect_stdout
@@ -183,3 +184,36 @@ def build_rlm_graph(root_llm, sub_llm, max_depth: int = 1, max_iterations: int =
     builder.add_conditional_edges("execute_code", should_continue, ["call_model", END])
     graph = builder.compile()
     return graph
+
+
+from langchain_openai import ChatOpenAI
+
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+DEFAULT_ROOT_MODEL = "openai/gpt-4o-mini"
+DEFAULT_SUB_MODEL = "openai/gpt-4o-mini"
+
+
+def make_llm(model: str) -> ChatOpenAI:
+    key = os.environ.get("OPENROUTER_API_KEY")
+    if not key:
+        raise RuntimeError("OPENROUTER_API_KEY 환경변수가 필요합니다.")
+    return ChatOpenAI(model=model, base_url=OPENROUTER_BASE_URL, api_key=key)
+
+
+def run(
+    question: str,
+    context: str,
+    root_model: str = DEFAULT_ROOT_MODEL,
+    sub_model: str = DEFAULT_SUB_MODEL,
+    max_depth: int = 1,
+    max_iterations: int = 10,
+) -> Optional[str]:
+    """질문 + 거대 context를 받아 RLM으로 답을 구한다. 실제 OpenRouter 호출."""
+    graph = build_rlm_graph(
+        make_llm(root_model), make_llm(sub_model), max_depth, max_iterations
+    )
+    result = graph.invoke(
+        {"question": question, "context": context, "depth": 0},
+        config={"recursion_limit": 2 * max_iterations + 10},
+    )
+    return result.get("final_answer")
