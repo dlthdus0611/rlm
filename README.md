@@ -12,9 +12,12 @@
 python3.10 -m venv .venv && source .venv/bin/activate   # Python 3.10+
 pip install -r requirements.txt
 export OPENROUTER_API_KEY=...        # 필수
+# (선택) 모델/엔드포인트 오버라이드 — 없으면 기본값(root=openai/gpt-5.5, sub=openai/gpt-5.5-mini)
+# export RLM_ROOT_MODEL=openai/gpt-5.5; export RLM_SUB_MODEL=openai/gpt-5.5-mini; export OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
 # (선택) LangSmith 트레이싱
 # export LANGSMITH_API_KEY=...; export LANGSMITH_TRACING=true; export LANGSMITH_PROJECT=mini-rlm
 ```
+설정은 `rlm/config.py`(pydantic-settings)가 호출 시점에 환경변수에서 읽습니다 — `.env`로도 지정 가능(`.env.example` 참고).
 
 ## 테스트 (네트워크/키 불필요)
 ```bash
