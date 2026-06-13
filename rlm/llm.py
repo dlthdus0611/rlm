@@ -1,14 +1,14 @@
-import os
-
 from langchain_openai import ChatOpenAI
 
-OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
-DEFAULT_ROOT_MODEL = "openai/gpt-4o-mini"
-DEFAULT_SUB_MODEL = "openai/gpt-4o-mini"
+from .config import get_settings
 
 
 def make_llm(model: str) -> ChatOpenAI:
-    key = os.environ.get("OPENROUTER_API_KEY")
-    if not key:
+    settings = get_settings()
+    if not settings.openrouter_api_key:
         raise RuntimeError("OPENROUTER_API_KEY 환경변수가 필요합니다.")
-    return ChatOpenAI(model=model, base_url=OPENROUTER_BASE_URL, api_key=key)
+    return ChatOpenAI(
+        model=model,
+        base_url=settings.openrouter_base_url,
+        api_key=settings.openrouter_api_key,
+    )
