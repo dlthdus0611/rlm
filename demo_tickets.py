@@ -7,7 +7,7 @@ import random
 
 from dotenv import load_dotenv
 
-from rlm_graph import run
+from rlm import run
 
 load_dotenv()  # 루트의 .env 에서 OPENROUTER_API_KEY 등을 환경변수로 로드
 
