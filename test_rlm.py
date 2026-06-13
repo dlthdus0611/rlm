@@ -185,3 +185,33 @@ def test_graph_context_not_in_model_messages():
     )
     assert "비밀본문" not in first_call_text
     assert "q" in first_call_text
+
+
+def test_graph_multi_turn_inspect_then_answer():
+    root = FakeChat([
+        '먼저 살펴봅니다.\n```repl\nprint(context[:5])\n```',
+        '이제 답합니다.\n```repl\nanswer["content"] = "ok"\nanswer["ready"] = True\n```',
+    ])
+    graph = build_rlm_graph(root, FakeSub(), max_iterations=5)
+    result = graph.invoke({"question": "q", "context": "안녕하세요", "depth": 0})
+    assert result["final_answer"] == "ok"
+    assert root.i == 2
+
+
+def test_graph_llm_query_used_in_code():
+    root = FakeChat([
+        '```repl\nr = llm_query("분류해줘")\nanswer["content"] = r\nanswer["ready"] = True\n```'
+    ])
+    graph = build_rlm_graph(root, FakeSub(reply="환불=예"), max_iterations=5)
+    result = graph.invoke({"question": "q", "context": "c", "depth": 0})
+    assert result["final_answer"] == "환불=예"
+
+
+def test_graph_llm_query_batched_preserves_order():
+    root = FakeChat([
+        '```repl\nrs = llm_query_batched(["a", "b", "c"])\n'
+        'answer["content"] = str(len(rs))\nanswer["ready"] = True\n```'
+    ])
+    graph = build_rlm_graph(root, FakeSub(reply="x"), max_iterations=5)
+    result = graph.invoke({"question": "q", "context": "c", "depth": 0})
+    assert result["final_answer"] == "3"
