@@ -18,7 +18,9 @@ RLM은 본질적으로 "모델이 코드 생성 → REPL 실행 → 축약 stdou
 
 ## 2. 비목표 (YAGNI)
 
-소켓 LMHandler, 외부 샌드박스(docker/e2b/modal), compaction, 모델 학습/distill, 다중 백엔드 추상화, `*_batched` 병렬 호출, 비동기 실행, 체크포인터/영속화(인메모리 단발 invoke로 충분).
+소켓 LMHandler, 외부 샌드박스(docker/e2b/modal), compaction, 모델 학습/distill, 다중 백엔드 추상화, **재귀 병렬 호출(`rlm_query_batched`)**, 비동기 실행, 체크포인터/영속화(인메모리 단발 invoke로 충분).
+
+> 단, **`llm_query_batched`(단일 호출의 병렬 버전)는 포함**한다 — 데모 체감 속도와 원본 충실도를 위해. 구현은 `ChatOpenAI.batch(prompts, config={"max_concurrency": N})`로 5~10줄.
 
 ## 3. 의존성 / 환경
 
@@ -53,11 +55,12 @@ RLM은 본질적으로 "모델이 코드 생성 → REPL 실행 → 축약 stdou
 - (무한 루프 방지: 종료조건 + max_iterations 이중 안전장치.)
 
 ### 4.4 컴포넌트 (그래프 외부 순수 모듈)
-- **`REPL`**: 영속 Python 네임스페이스. `run(code: str) -> str`(stdout 반환, 예외는 traceback 문자열). 주입: `context`, `llm_query`, `rlm_query`, `answer`(특수 dict, `_AnswerDict` 축소판), `SHOW_VARS()`. 구현: `exec` + `contextlib.redirect_stdout`.
+- **`REPL`**: 영속 Python 네임스페이스. `run(code: str) -> str`(stdout 반환, 예외는 traceback 문자열). 주입: `context`, `llm_query`, `llm_query_batched`, `rlm_query`, `answer`(특수 dict, `_AnswerDict` 축소판), `SHOW_VARS()`. 구현: `exec` + `contextlib.redirect_stdout`.
 - **`parse_code_blocks(text) -> list[str]`**: 정규식 `r"```repl\s*\n(.*?)```"` (re.DOTALL).
 - **`make_llm(model) -> ChatOpenAI`**: OpenRouter 클라이언트 팩토리.
 - **`build_rlm_graph(root_model, sub_model, max_depth, max_iterations) -> CompiledGraph`**: 위 노드/엣지를 조립·compile. `setup` 노드가 REPL에 주입하는 함수들:
   - `llm_query(prompt)` → `make_llm(sub_model)` 단일 호출.
+  - `llm_query_batched(prompts: list[str]) -> list[str]` → `make_llm(sub_model).batch(prompts, config={"max_concurrency": N})`, 입력과 동일 순서 반환. 기본 `N=8`(상수).
   - `rlm_query(question, context)` → `next_depth = depth+1`; `next_depth > max_depth`면 `llm_query(question+"\n\n"+context)` 폴백, 아니면 **같은 compiled 그래프를 `invoke({question, context, depth: next_depth})`** 하고 `final_answer` 반환.
 
 ## 5. 데이터 흐름
@@ -84,7 +87,7 @@ invoke({question, context, depth=0})
 
 - **데이터**: N개(기본 60) 가짜 지원 티켓 합성. 각 티켓에 (a) 환불 언급 여부, (b) 원인(배송지연/품질불량/단순변심/해당없음). 정답 카운트를 생성 시점 기록(채점용). `random.seed` 고정.
 - **질문**: "환불을 언급한 티켓 수와, 그중 '배송 지연'이 원인인 수."
-- **기대 동작**: 루트가 `context`를 티켓 단위 split → `for` 루프로 각 티켓 `llm_query` 분류 → 집계 → `answer` 반환.
+- **기대 동작**: 루트가 `context`를 티켓 단위 split → `llm_query_batched`로 티켓들을 병렬 분류(또는 `for` 루프 `llm_query`) → 집계 → `answer` 반환.
 - **출력**: 모델 답 vs 실제 정답, 일치 여부, 사용 턴 수. (LangSmith 켜져 있으면 트레이스 URL.)
 
 ## 7. 에러 처리
@@ -104,6 +107,7 @@ invoke({question, context, depth=0})
 
 - `parse_code_blocks`: 0/1/다수/언어태그 변형.
 - `REPL.run`: stdout 캡처, 예외→traceback, `answer["ready"]` 콜백, 턴 간 변수 영속, truncate.
+- `llm_query_batched`: fake model로 입력 순서 보존·길이 일치 검증.
 - **그래프 루프**: 루트 모델을 `FakeMessagesListChatModel`(또는 `GenericFakeChatModel`)로 교체해 미리 정한 ```repl``` 응답 시퀀스를 흘려보내며 종료조건·`messages` 누적·`execute_code` 동작을 **네트워크/키 없이** 검증.
 - **depth 폴백**: `rlm_query`가 `max_depth` 초과 시 `llm_query` 폴백 경로 검증(역시 fake model).
 - 데모는 실제 API 필요 → 수동 스모크. README에 실행법.
