@@ -98,7 +98,7 @@ def main():
 
     with st.expander("샘플 데이터 채우기", expanded=False):
         col1, col2 = st.columns(2)
-        n = col1.number_input("티켓 수", 10, 120, 60)
+        n = col1.number_input("티켓 수", 10, 10_000_000, 60)
         seed = col2.number_input("seed", 0, 9999, 42)
         if st.button("지저분한 티켓으로 채우기"):
             ctx, refund, delay = make_tickets(int(n), int(seed))
