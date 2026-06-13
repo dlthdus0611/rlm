@@ -83,3 +83,18 @@ def test_repl_show_vars():
     out = repl.run("print(SHOW_VARS())")
     assert "myvar" in out
     assert "context" not in out
+
+
+from rlm_graph import _truncate, MAX_OUTPUT_CHARS
+
+
+def test_truncate_short_passthrough():
+    assert _truncate("짧은 문자열") == "짧은 문자열"
+
+
+def test_truncate_long_marks_remainder():
+    s = "a" * (MAX_OUTPUT_CHARS + 100)
+    out = _truncate(s)
+    assert out.startswith("a" * MAX_OUTPUT_CHARS)
+    assert "+100 chars" in out
+    assert len(out) < len(s)

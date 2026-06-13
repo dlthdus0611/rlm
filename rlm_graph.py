@@ -69,3 +69,13 @@ class REPL:
         except Exception:
             buf.write(traceback.format_exc())
         return buf.getvalue()
+
+
+MAX_OUTPUT_CHARS = 8000
+
+
+def _truncate(s: str, limit: int = MAX_OUTPUT_CHARS) -> str:
+    """REPL 출력이 한도를 넘으면 잘라내고 남은 글자 수를 표기한다."""
+    if len(s) <= limit:
+        return s
+    return s[:limit] + f"\n...[+{len(s) - limit} chars truncated]"
