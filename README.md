@@ -23,8 +23,13 @@ pytest -v
 
 ## 데모 (실제 API 필요)
 ```bash
+# CLI: 지저분한 티켓 전수 집계 + 채점
 python demo_tickets.py
+
+# 웹 UI: 임의 context/질문으로 RLM 실행 + 추론 과정 실시간 표시
+streamlit run streamlit_app.py
 ```
+임의 텍스트를 붙여넣거나 파일을 올려 쓸 수 있고, "지저분한 티켓" 샘플도 원클릭으로 채울 수 있습니다.
 
 ## 이게 보여주는 것 (RLM 핵심 메커니즘)
 1. **컨텍스트=핸들**: 거대 입력은 REPL 변수 `context`로만 적재 — 모델 메시지엔 메타데이터만.
@@ -49,7 +54,10 @@ python demo_tickets.py
   - `graph.py` — LangGraph 제어 루프
   - `llm.py` — OpenRouter LLM 팩토리
   - `api.py` — 공개 진입점 `run()`
+  - `config.py` — 환경변수 설정(pydantic-settings)
   - `prompts.py` — 한글 프롬프트
 - `tests/` — 모듈별 단위/그래프 테스트
-- `demo_tickets.py` — 데모
+- `demo_tickets.py` — CLI 티켓 집계 데모
+- `streamlit_app.py` — 웹 플레이그라운드(임의 입력 + 실시간 추론 트레이스)
+- `app_trace.py` — 스트리밍 업데이트를 트레이스 항목으로 변환(순수)
 - `docs/` — 설계 spec, 프롬프트 참고, 본 계획
