@@ -1,8 +1,15 @@
 # mini-rlm
 
-거대한 입력을 모델 컨텍스트에 넣지 않고 **Python REPL 변수 `context`로만 두면**, 모델이 코드를
-써서 그것을 훑고·쪼개고·sub-LLM에 위임하며 답을 쌓아 올린다. 논문 *"Recursive Language Models"*
-(arXiv:2512.24601, repo: alexzhang13/rlm)의 핵심 메커니즘을 LangGraph로 재현한 학습용 토이.
+논문 *"Recursive Language Models"*(arXiv:2512.24601, repo: alexzhang13/rlm)의 핵심 메커니즘을
+LangGraph로 재현한 학습용 토이.
+
+## RLM이란?
+
+LLM은 컨텍스트가 길어질수록 비싸지고 정확도도 떨어진다. **Recursive Language Model(RLM)**은
+긴 입력을 한 번에 읽는 대신 **모델이 코드로 탐색하는 환경**으로 둔다: 입력은 Python REPL의
+`context` 변수로만 존재하고, 모델은 그것을 슬라이싱·검색하거나 조각을 다른 LLM 호출(`llm_query`)
+또는 **자기 자신의 재귀 인스턴스**(`rlm_query`)에 넘겨 처리한 뒤 결과만 모은다. 모델이 부분 문제를
+또 다른 모델 호출로 푼다는 데서 "재귀(recursive)"라는 이름이 온다.
 
 ## 빠른 시작
 
