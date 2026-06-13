@@ -1,5 +1,5 @@
 from rlm.prompts import (
-    SYSTEM_PROMPT, ORCHESTRATOR_ADDENDUM,
+    SYSTEM_PROMPT,
     build_metadata_message, build_turn_prompt,
 )
 
