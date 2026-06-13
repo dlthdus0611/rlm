@@ -25,3 +25,26 @@ pytest -v
 ```bash
 python demo_tickets.py
 ```
+
+## 이게 보여주는 것 (RLM 핵심 메커니즘)
+1. **컨텍스트=핸들**: 거대 입력은 REPL 변수 `context`로만 적재 — 모델 메시지엔 메타데이터만.
+2. **코드로 다루기**: 모델이 ```repl``` 블록을 생성 → `execute_code` 노드가 실행, stdout만 피드백.
+3. **재귀 sub-call**: `rlm_query`가 같은 그래프를 depth+1로 invoke, 한도 초과 시 `llm_query` 폴백.
+4. **출력 축약 + 종료**: stdout 8K 축약, `answer["ready"]=True`로 최종 답 반환.
+
+## 논문/원본 repo와의 차이 (토이 단순화)
+| 항목 | 원본(alexzhang13/rlm) | 이 토이 |
+|---|---|---|
+| 제어 루프 | 자체 구현 | LangGraph StateGraph |
+| 코드 실행 | docker/e2b/modal 샌드박스 옵션 | in-process `exec()` (신뢰 환경 한정) |
+| 병렬 | llm/rlm_query_batched | llm_query_batched만 |
+| 종료 | answer dict (`ready`) | 동일 |
+| 출력 축약 | ~20K자 | ~8K자 |
+| 학습/compaction | 있음 | 없음 |
+
+## 구조
+- `rlm_graph.py` — 핵심 (그래프, REPL, parse, run)
+- `prompts.py` — 한글 프롬프트
+- `demo_tickets.py` — 데모
+- `test_rlm.py` — 테스트
+- `docs/` — 설계 spec, 프롬프트 참고, 본 계획
