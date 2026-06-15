@@ -148,3 +148,28 @@ def run_one(item: QAItem, context: str, root_llm, sub_llm, judge_llm,
     turns = state.get("iteration", 0)
     verdict = judge(question, item.answer, answer, judge_llm)
     return EvalResult(item, answer, turns, verdict)
+
+
+def _bucket(results: list[EvalResult]) -> dict:
+    total = len(results)
+    correct = sum(1 for r in results if r.verdict.label == "correct")
+    partial = sum(1 for r in results if r.verdict.label == "partial")
+    incorrect = sum(1 for r in results if r.verdict.label == "incorrect")
+    errors = sum(1 for r in results if r.error)
+    turns = [r.turns for r in results if not r.error]
+    score = (correct + 0.5 * partial) / total if total else 0.0
+    return {
+        "total": total, "correct": correct, "partial": partial,
+        "incorrect": incorrect, "errors": errors, "score": round(score, 3),
+        "avg_turns": round(sum(turns) / len(turns), 2) if turns else 0.0,
+    }
+
+
+def aggregate(results: list[EvalResult]) -> dict:
+    """전체 + 난이도별 집계. score = (correct + 0.5*partial)/total."""
+    by_difficulty = {}
+    for diff in ("low", "medium", "high", "expert"):
+        subset = [r for r in results if r.item.difficulty == diff]
+        if subset:
+            by_difficulty[diff] = _bucket(subset)
+    return {"overall": _bucket(results), "by_difficulty": by_difficulty}

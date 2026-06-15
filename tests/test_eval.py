@@ -186,3 +186,41 @@ def test_run_one_uses_question_textbook_field():
 
     assert "정석질문" in captured["text"]
     assert "대충질문" not in captured["text"]
+
+
+from rlm.eval import aggregate
+
+
+def _result(diff, label, turns=2, error=None):
+    return EvalResult(
+        QAItem(id="x", difficulty=diff, question="q", answer="a"),
+        model_answer="m", turns=turns, verdict=Verdict(label), error=error,
+    )
+
+
+def test_aggregate_overall_score():
+    results = [
+        _result("low", "correct"),
+        _result("low", "partial"),
+        _result("high", "incorrect"),
+        _result("high", "correct"),
+    ]
+    agg = aggregate(results)
+    # score = (correct 2 + 0.5*partial 1) / 4 = 0.625
+    assert agg["overall"]["total"] == 4
+    assert agg["overall"]["correct"] == 2
+    assert agg["overall"]["partial"] == 1
+    assert agg["overall"]["score"] == 0.625
+
+
+def test_aggregate_by_difficulty_and_errors():
+    results = [
+        _result("low", "correct", turns=3),
+        _result("low", "incorrect", error="boom"),
+    ]
+    agg = aggregate(results)
+    assert set(agg["by_difficulty"].keys()) == {"low"}
+    low = agg["by_difficulty"]["low"]
+    assert low["total"] == 2
+    assert low["errors"] == 1
+    assert low["avg_turns"] == 3.0  # 에러 문항은 평균 턴에서 제외
