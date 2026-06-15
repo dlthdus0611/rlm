@@ -6,6 +6,7 @@ streamlit/CLI에 의존하지 않는 순수 로직. LLM은 .invoke()를 가진 R
 from __future__ import annotations
 
 import json
+import random
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -39,3 +40,12 @@ def load_testset(path: str) -> list[QAItem]:
             question_textbook=d.get("question_textbook", ""),
         ))
     return items
+
+
+def select_items(items: list[QAItem], n: Optional[int] = None,
+                 seed: int = 42, difficulties: Optional[list] = None) -> list[QAItem]:
+    """난이도 필터 후 n개를 결정적으로(seed 고정) 샘플링한다. n이 None이면 전체."""
+    pool = [it for it in items if not difficulties or it.difficulty in difficulties]
+    if n is not None and n < len(pool):
+        pool = random.Random(seed).sample(pool, n)
+    return pool

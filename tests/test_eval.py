@@ -33,3 +33,32 @@ def test_load_testset_cross_uses_sections(tmp_path):
 
     assert items[0].sections == ["01_회사개요_연혁", "14_계열회사"]
     assert items[0].section == ""
+
+
+from rlm.eval import select_items
+
+
+def _items():
+    return [
+        QAItem(id=f"Q{i}", difficulty=("low" if i % 2 == 0 else "high"),
+               question="q", answer="a")
+        for i in range(10)
+    ]
+
+
+def test_select_items_filters_by_difficulty():
+    out = select_items(_items(), difficulties=["high"])
+    assert len(out) == 5
+    assert all(it.difficulty == "high" for it in out)
+
+
+def test_select_items_samples_n_deterministically():
+    a = select_items(_items(), n=3, seed=42)
+    b = select_items(_items(), n=3, seed=42)
+    assert len(a) == 3
+    assert [it.id for it in a] == [it.id for it in b]  # seed 고정 → 동일
+
+
+def test_select_items_n_larger_than_pool_returns_all():
+    out = select_items(_items(), n=999)
+    assert len(out) == 10
