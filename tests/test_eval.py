@@ -108,3 +108,81 @@ def test_judge_unparseable_retries_then_incorrect():
     v = judge("q", "a", "b", j)
     assert v.label == "incorrect"
     assert j.i == 2  # 2회 시도
+
+
+from rlm.eval import EvalResult, run_one
+
+
+class FakeChat:
+    """RLM 루트 모델 대역 — 정해진 응답을 순서대로 반환."""
+
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.i = 0
+
+    def invoke(self, messages):
+        idx = min(self.i, len(self.responses) - 1)
+        self.i += 1
+        return AIMessage(content=self.responses[idx])
+
+    def batch(self, prompts, config=None):
+        return [AIMessage(content="x") for _ in prompts]
+
+
+class FakeSub:
+    def invoke(self, prompt):
+        return AIMessage(content="고정")
+
+    def batch(self, prompts, config=None):
+        return [AIMessage(content="고정") for _ in prompts]
+
+
+def test_run_one_full_path_offline():
+    item = QAItem(id="Q1", difficulty="low", question="q", answer="정답 42")
+    root = FakeChat([
+        '```repl\nanswer["content"] = "정답 42"\nanswer["ready"] = True\n```'
+    ])
+    jdg = FakeJudge(['{"label":"correct","reason":"일치"}'])
+
+    res = run_one(item, "ctx", root, FakeSub(), jdg, max_iterations=5)
+
+    assert isinstance(res, EvalResult)
+    assert res.model_answer == "정답 42"
+    assert res.turns == 1
+    assert res.verdict.label == "correct"
+    assert res.error is None
+
+
+def test_run_one_no_answer_is_incorrect():
+    item = QAItem(id="Q2", difficulty="low", question="q", answer="a")
+    root = FakeChat(['```repl\nprint("탐색만")\n```'])  # answer 미설정
+    jdg = FakeJudge(['{"label":"correct","reason":"호출되면 안됨"}'])
+
+    res = run_one(item, "ctx", root, FakeSub(), jdg, max_iterations=3)
+
+    assert res.model_answer is None
+    assert res.verdict.label == "incorrect"
+    assert jdg.i == 0  # 미제출이면 judge 호출 안 함
+
+
+def test_run_one_uses_question_textbook_field():
+    item = QAItem(id="Q3", difficulty="low", question="대충질문",
+                  answer="a", question_textbook="정석질문")
+    captured = {}
+
+    class CapRoot(FakeChat):
+        def invoke(self, messages):
+            # 첫 호출 메시지에 질문이 포함됨(메타데이터 메시지)
+            captured["text"] = " ".join(
+                m.content for m in messages if isinstance(m.content, str)
+            )
+            return super().invoke(messages)
+
+    root = CapRoot(['```repl\nanswer["content"]="ok"\nanswer["ready"]=True\n```'])
+    jdg = FakeJudge(['{"label":"correct","reason":"x"}'])
+
+    run_one(item, "ctx", root, FakeSub(), jdg, max_iterations=5,
+            question_field="question_textbook")
+
+    assert "정석질문" in captured["text"]
+    assert "대충질문" not in captured["text"]

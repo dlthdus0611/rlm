@@ -13,6 +13,8 @@ from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
+from .graph import build_rlm_graph
+
 
 @dataclass
 class QAItem:
@@ -30,6 +32,15 @@ class QAItem:
 class Verdict:
     label: str           # "correct" | "partial" | "incorrect"
     reason: str = ""
+
+
+@dataclass
+class EvalResult:
+    item: QAItem
+    model_answer: Optional[str]
+    turns: int
+    verdict: Verdict
+    error: Optional[str] = None
 
 
 def load_testset(path: str) -> list[QAItem]:
@@ -114,3 +125,26 @@ def judge(question: str, gold: str, candidate: Optional[str], judge_llm) -> Verd
         if verdict is not None:
             return verdict
     return Verdict("incorrect", f"judge 파싱 실패: {text[:200]}")
+
+
+def run_one(item: QAItem, context: str, root_llm, sub_llm, judge_llm,
+            max_depth: int = 1, max_iterations: int = 10,
+            question_field: str = "question") -> EvalResult:
+    """한 문항에 대해 RLM을 실행하고 채점해 EvalResult를 낸다.
+
+    question_field로 '대충질문'(question) vs '정석'(question_textbook)을 선택.
+    실행 예외는 잡아 EvalResult.error에 담는다(배치 계속).
+    """
+    question = getattr(item, question_field, "") or item.question
+    try:
+        graph = build_rlm_graph(root_llm, sub_llm, max_depth, max_iterations)
+        state = graph.invoke(
+            {"question": question, "context": context, "depth": 0},
+            config={"recursion_limit": 2 * max_iterations + 10},
+        )
+    except Exception as exc:  # noqa: BLE001 - 문항 단위 실패는 기록하고 계속
+        return EvalResult(item, None, 0, Verdict("incorrect", "실행 오류"), error=str(exc))
+    answer = state.get("final_answer")
+    turns = state.get("iteration", 0)
+    verdict = judge(question, item.answer, answer, judge_llm)
+    return EvalResult(item, answer, turns, verdict)
