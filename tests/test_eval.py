@@ -62,3 +62,49 @@ def test_select_items_samples_n_deterministically():
 def test_select_items_n_larger_than_pool_returns_all():
     out = select_items(_items(), n=999)
     assert len(out) == 10
+
+
+from langchain_core.messages import AIMessage
+
+from rlm.eval import Verdict, judge
+
+
+class FakeJudge:
+    """정해진 문자열을 순서대로 반환하는 가짜 judge 모델."""
+
+    def __init__(self, responses):
+        self.responses = list(responses)
+        self.i = 0
+
+    def invoke(self, messages):
+        idx = min(self.i, len(self.responses) - 1)
+        self.i += 1
+        return AIMessage(content=self.responses[idx])
+
+
+def test_judge_parses_correct():
+    j = FakeJudge(['{"label": "correct", "reason": "수치 일치"}'])
+    v = judge("q", "1969년", "1969년 1월", j)
+    assert isinstance(v, Verdict)
+    assert v.label == "correct"
+    assert v.reason == "수치 일치"
+
+
+def test_judge_parses_partial_with_surrounding_text():
+    j = FakeJudge(['판정: {"label":"partial","reason":"일부만"} 입니다'])
+    v = judge("q", "a", "b", j)
+    assert v.label == "partial"
+
+
+def test_judge_empty_answer_is_incorrect_without_calling_llm():
+    j = FakeJudge(['{"label":"correct","reason":"x"}'])
+    v = judge("q", "a", "   ", j)
+    assert v.label == "incorrect"
+    assert j.i == 0  # judge 모델 호출 안 함
+
+
+def test_judge_unparseable_retries_then_incorrect():
+    j = FakeJudge(["헛소리1", "헛소리2"])
+    v = judge("q", "a", "b", j)
+    assert v.label == "incorrect"
+    assert j.i == 2  # 2회 시도
