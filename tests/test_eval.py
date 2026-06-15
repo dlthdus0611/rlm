@@ -110,6 +110,22 @@ def test_judge_unparseable_retries_then_incorrect():
     assert j.i == 2  # 2회 시도
 
 
+def test_judge_parses_json_after_reasoning_with_braces():
+    # 산문에 중괄호가 먼저 등장하고 그 뒤에 진짜 JSON이 오는 경우
+    j = FakeJudge(['추론 {메모} 후 결론: {"label":"correct","reason":"맞음"}'])
+    v = judge("q", "a", "b", j)
+    assert v.label == "correct"
+    assert j.i == 1  # 재시도 없이 첫 호출에서 파싱
+
+
+def test_judge_parses_json_with_trailing_object():
+    # 유효 JSON 뒤에 다른 객체가 붙는 경우
+    j = FakeJudge(['{"label":"partial","reason":"일부"} {디버그:1}'])
+    v = judge("q", "a", "b", j)
+    assert v.label == "partial"
+    assert j.i == 1
+
+
 from rlm.eval import EvalResult, run_one
 
 

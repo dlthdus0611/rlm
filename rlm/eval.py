@@ -93,17 +93,19 @@ def _build_judge_prompt(question: str, gold: str, candidate: str) -> str:
 
 
 def _parse_verdict(text: str) -> Optional[Verdict]:
-    match = re.search(r"\{.*\}", text, re.S)
-    if not match:
-        return None
-    try:
-        obj = json.loads(match.group(0))
-    except (ValueError, TypeError):
-        return None
-    label = str(obj.get("label", "")).strip().lower()
-    if label not in _VALID_LABELS:
-        return None
-    return Verdict(label=label, reason=str(obj.get("reason", "")))
+    # 응답에 산문이나 여분 객체가 섞여도, 파싱 가능하고 유효 label을 가진 첫 객체를 택한다.
+    # 먼저 전체를 시도(reason에 중괄호가 있어도 처리), 이어서 개별 {...} 후보를 훑는다.
+    candidates = [text.strip()]
+    candidates += [m.group(0) for m in re.finditer(r"\{.*?\}", text, re.S)]
+    for candidate in candidates:
+        try:
+            obj = json.loads(candidate)
+        except (ValueError, TypeError):
+            continue
+        label = str(obj.get("label", "")).strip().lower()
+        if label in _VALID_LABELS:
+            return Verdict(label=label, reason=str(obj.get("reason", "")))
+    return None
 
 
 def judge(question: str, gold: str, candidate: Optional[str], judge_llm) -> Verdict:
