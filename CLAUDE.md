@@ -20,11 +20,8 @@ pytest -v
 pytest tests/test_graph.py -v                       # 단일 파일
 pytest tests/test_graph.py::test_graph_single_turn_answer -v   # 단일 테스트
 
-# 데모(CLI) — 실제 OpenRouter 호출 필요 (.env 또는 환경변수에 OPENROUTER_API_KEY)
-python demo_tickets.py
-
-# 웹 플레이그라운드 — 임의 context/질문 + 실시간 추론 트레이스 (실제 OpenRouter 호출)
-streamlit run streamlit_app.py
+# 웹 플레이그라운드 — 문서 업로드 후 그 문서로 QA + 실시간 추론 트레이스 (실제 OpenRouter 호출)
+streamlit run app/streamlit_app.py
 ```
 
 설정(API 키·엔드포인트·기본 모델)은 환경변수로 오버라이드한다 — `OPENROUTER_API_KEY`(필수),
@@ -75,15 +72,15 @@ OpenRouter 경유 `ChatOpenAI`)로 격리돼 있고, `rlm/api.py`의 `run()`이 
 `tests/test_graph.py`의 `FakeChat`(미리 정한 응답을 순서대로 반환)·`FakeSub`(고정 응답).
 새 그래프 동작을 테스트할 때 이 패턴을 따를 것 — 실제 API를 호출하지 말 것.
 
-## 데모·UI
+## UI (`app/`)
 
-- `demo_tickets.py` — '환불 요청 수 / 그중 배송지연 사유' 전수 집계 CLI 데모. 표현이 제각각이고
-  함정(단어만 있는 비요청, 단어 없는 요청, 지연 언급 비환불)이 섞인 데이터를 생성해 키워드
-  카운트로는 틀리고 sub-LLM 의미 분류로만 맞게 한다. 정답 라벨용/표현용 RNG를 분리해 카운트는
-  재현 가능. `TICKET_QUESTION` 상수는 여기 정의하고 `streamlit_app.py`가 import해 공유한다.
-- `streamlit_app.py` — 임의 context/질문을 받는 범용 플레이그라운드. `graph.stream(stream_mode=
-  "updates")`로 턴별 생성 코드/REPL 출력을 실시간 렌더. 티켓은 원클릭 샘플(채울 때만 채점).
-- `app_trace.py` — 스트림 업데이트를 화면용 `TraceEntry`로 바꾸는 **streamlit 비의존 순수 함수**.
+UI는 `app/` 패키지(응용 계층, `eval/`과 대칭)에 모여 있고 코어 `rlm`을 소비한다.
+streamlit은 스크립트 폴더만 sys.path에 넣으므로 `app/streamlit_app.py` 상단에서 프로젝트
+루트를 sys.path에 추가한다 — 이게 없으면 `streamlit run`에서 `rlm`/`app` import가 깨진다.
+
+- `app/streamlit_app.py` — 문서(텍스트)를 업로드하면 그 문서를 context로 두고 질문에 답하는
+  QA 플레이그라운드. `graph.stream(stream_mode="updates")`로 턴별 생성 코드/REPL 출력을 실시간 렌더.
+- `app/app_trace.py` — 스트림 업데이트를 화면용 `TraceEntry`로 바꾸는 **streamlit 비의존 순수 함수**.
   `tests/test_app_trace.py`로 검증(네트워크·streamlit 없이).
 
 ## 한글 프롬프트

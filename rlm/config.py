@@ -1,6 +1,6 @@
 """실행 설정. pydantic-settings로 환경변수에서 읽고, 없으면 기본값을 쓴다.
 
-값은 프로세스 환경변수에서 읽는다(env_file 미사용). `demo_tickets.py`의
+값은 프로세스 환경변수에서 읽는다(env_file 미사용). 진입점의
 `load_dotenv()`가 `.env`를 `os.environ`으로 올린 뒤 `get_settings()`를 호출하면
 그 값이 반영된다 — import 시점이 아니라 호출 시점에 읽어야 dotenv 순서와 무관하게
 동작한다.

@@ -18,8 +18,7 @@ python3.10 -m venv .venv && source .venv/bin/activate   # Python 3.10+
 pip install -r requirements.txt
 export OPENROUTER_API_KEY=...        # 필수 (openrouter.ai/keys)
 
-python demo_tickets.py             # CLI: 티켓 집계 데모
-streamlit run streamlit_app.py     # 웹: 아무 텍스트·질문이나 넣고 추론 과정을 실시간으로
+streamlit run app/streamlit_app.py # 웹: 문서 업로드 후 그 문서로 QA, 추론 과정을 실시간으로
 pytest -v                          # 테스트 (네트워크·키 불필요)
 ```
 
