@@ -58,9 +58,9 @@ def _run_rlm(context, question, root_model, sub_model, max_depth, max_iterations
 
 
 def main():
-    ui.page_header("🧠", "Recursive Language Model 플레이그라운드",
-                   "긴 context를 REPL 변수로만 두고, 모델이 코드를 생성·실행하며 답을 쌓는 과정을 턴별로 봅니다.")
-    ui.security_note()
+    ui.hero("🧠", "Recursive Language Model 플레이그라운드",
+            "긴 context를 REPL 변수로만 두고, 모델이 코드를 생성·실행하며 답을 쌓는 과정을 턴별로 봅니다.",
+            chip="⚠️ in-process exec() · 신뢰할 수 있는 입력·본인 머신 전용")
 
     st.session_state.setdefault("context", "")
     st.session_state.setdefault("question", "")

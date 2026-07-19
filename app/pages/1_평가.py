@@ -30,6 +30,9 @@ SETS = {
 }
 CONTEXT_PATH = "data/samsung_2023.txt"
 _DIFF_ORDER = ["low", "medium", "high", "expert"]
+# 모델 설정은 UI에서 숨기고 환경변수/기본값과 아래 상수를 쓴다.
+MAX_ITERATIONS = 12
+MAX_DEPTH = 1
 
 
 def _load_items(set_label):
@@ -39,24 +42,25 @@ def _load_items(set_label):
     return items
 
 
-def _live_counts(box, counts, done, total):
-    """실행 중 실시간 집계 카드 4장을 갱신한다."""
-    with box.container():
-        c1, c2, c3, c4 = st.columns(4)
-        c1.metric("진행", f"{done}/{total}")
-        c2.metric("✅ correct", counts["correct"])
-        c3.metric("🟡 partial", counts["partial"])
-        c4.metric("❌ incorrect", counts["incorrect"])
+def _render_live(box, counts, done, total):
+    """실행 중 실시간 집계 카드를 갱신한다."""
+    box.markdown(ui.stat_cards([
+        ("진행", f"{done}/{total}", True),
+        ("✅ correct", counts["correct"], False),
+        ("🟡 partial", counts["partial"], False),
+        ("❌ incorrect", counts["incorrect"], False),
+    ]), unsafe_allow_html=True)
 
 
-def _summary_cards(overall):
-    """최종 종합 지표를 카드로."""
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("종합 score", f"{overall['score']:.3f}", border=True)
-    c2.metric("✅ correct", overall["correct"], border=True)
-    c3.metric("🟡 partial", overall["partial"], border=True)
-    c4.metric("❌ incorrect", overall["incorrect"], border=True)
-    c5.metric("평균 turns", overall["avg_turns"], border=True)
+def _render_summary(overall):
+    """최종 종합 지표를 스탯 카드로."""
+    st.markdown(ui.stat_cards([
+        ("종합 SCORE", f"{overall['score']:.3f}", True),
+        ("✅ correct", overall["correct"], False),
+        ("🟡 partial", overall["partial"], False),
+        ("❌ incorrect", overall["incorrect"], False),
+        ("평균 turns", overall["avg_turns"], False),
+    ]), unsafe_allow_html=True)
 
 
 def _difficulty_table(by_difficulty):
@@ -78,16 +82,19 @@ def _difficulty_table(by_difficulty):
 
 
 def _item_expander(r, cfg, entries):
-    """문항 하나의 드릴다운(판정 요약 + 추론 트레이스)."""
+    """문항 하나의 드릴다운(판정 배지 + 추론 트레이스)."""
     icon = ui.VERDICT_ICON.get(r.verdict.label, "·")
     head = f"{icon}  {r.item.id}  ·  {r.item.difficulty}  ·  turns {r.turns}"
     with st.expander(head):
+        st.markdown(
+            f'{ui.verdict_badge(r.verdict.label)}'
+            f'<span style="opacity:.65"> &nbsp;{r.verdict.reason}</span>',
+            unsafe_allow_html=True)
         q = getattr(r.item, cfg["question_field"], "") or r.item.question
         st.markdown(f"**질문**  {q}")
         st.markdown(f"**정답**  {r.item.answer}")
         model_ans = r.model_answer if r.model_answer is not None else "_(미제출)_"
         st.markdown(f"**모델답**  {model_ans}")
-        st.markdown(f"**judge**  `{r.verdict.label}` — {r.verdict.reason}")
         if r.error:
             st.error(r.error)
         st.divider()
@@ -95,17 +102,17 @@ def _item_expander(r, cfg, entries):
         ui.render_trace(entries)
 
 
-def _run(items, context, cfg, judge_model):
+def _run(items, context, cfg):
     root_llm = make_llm(cfg["root_model"])
     sub_llm = make_llm(cfg["sub_model"])
-    judge_llm = make_llm(judge_model)
+    judge_llm = make_llm(cfg["judge_model"])
 
     total = len(items)
     st.subheader("진행 상황")
     progress = st.progress(0.0, text=f"0/{total} 채점 중")
     live = st.empty()
     counts = {"correct": 0, "partial": 0, "incorrect": 0}
-    _live_counts(live, counts, 0, total)
+    _render_live(live, counts, 0, total)
 
     st.subheader("문항별 결과")
     done = 0
@@ -125,27 +132,26 @@ def _run(items, context, cfg, judge_model):
             counts[r.verdict.label] += 1
             done += 1
             progress.progress(done / total, text=f"{done}/{total} 채점 중")
-            _live_counts(live, counts, done, total)
+            _render_live(live, counts, done, total)
             _item_expander(r, cfg, traces.get(r.item.id, []))
         elif ev.kind == "run_done":
             progress.progress(1.0, text=f"{total}/{total} 완료 🎉")
             st.divider()
             st.subheader("종합")
-            _summary_cards(ev.aggregate["overall"])
+            _render_summary(ev.aggregate["overall"])
             _difficulty_table(ev.aggregate["by_difficulty"])
 
-            payload = to_payload(
-                {**cfg, "judge_model": judge_model}, ev.aggregate, ev.results,
-                cfg["question_field"])
+            payload = to_payload(cfg, ev.aggregate, ev.results, cfg["question_field"])
             st.download_button(
                 "결과 JSON 다운로드", json.dumps(payload, ensure_ascii=False, indent=2),
-                file_name="eval_results.json", mime="application/json", icon=":material/download:")
+                file_name="eval_results.json", mime="application/json",
+                icon=":material/download:")
 
 
 def main():
-    ui.page_header("📊", "RLM 평가",
-                   "data/의 QA 테스트셋을 골라 라이브로 실행·채점하고 결과를 확인합니다.")
-    ui.security_note()
+    ui.hero("📊", "RLM 평가",
+            "data/의 QA 테스트셋을 난이도별로 골라 라이브로 실행·채점하고 결과를 확인합니다.",
+            chip="⚠️ in-process exec() · 실제 OpenRouter 호출 · 신뢰 환경 전용")
 
     settings = get_settings()
     api_key_present = bool(settings.openrouter_api_key)
@@ -162,12 +168,6 @@ def main():
         question_field = st.radio(
             "질문 형태", ["question", "question_textbook"],
             format_func=lambda k: "대충질문" if k == "question" else "정석")
-        with st.expander("모델 설정"):
-            root_model = st.text_input("root 모델", settings.rlm_root_model)
-            sub_model = st.text_input("sub 모델", settings.rlm_sub_model)
-            judge_model = st.text_input("judge 모델", settings.rlm_sub_model)
-            max_iterations = st.slider("max_iterations", 4, 20, 12)
-            max_depth = st.slider("max_depth", 0, 2, 1)
         ui.api_key_badge(api_key_present)
 
     if n > 20:
@@ -188,10 +188,11 @@ def main():
         cfg = {
             "set": set_label, "n": int(n), "seed": int(seed),
             "difficulty": difficulties, "question_field": question_field,
-            "root_model": root_model, "sub_model": sub_model,
-            "max_iterations": max_iterations, "max_depth": max_depth,
+            "root_model": settings.rlm_root_model, "sub_model": settings.rlm_sub_model,
+            "judge_model": settings.rlm_sub_model,
+            "max_iterations": MAX_ITERATIONS, "max_depth": MAX_DEPTH,
         }
-        _run(items, context, cfg, judge_model)
+        _run(items, context, cfg)
 
 
 if __name__ == "__main__":
