@@ -193,6 +193,20 @@ def main():
             "max_iterations": MAX_ITERATIONS, "max_depth": MAX_DEPTH,
         }
         _run(items, context, cfg)
+    else:
+        picked = select_items(items_all, n=int(n), seed=int(seed), difficulties=difficulties)
+        ui.empty_state(
+            "▶ 평가 실행을 누르면 여기에 진행 상황과 결과가 나타납니다",
+            [
+                f"선택: <b>{set_label}</b> · 난이도 {', '.join(difficulties) or '(없음)'} · "
+                f"<b>{len(picked)}문항</b> (seed {int(seed)} 고정 샘플링)",
+                "문항마다 RLM이 삼성 사업보고서를 context로 두고 코드를 생성·실행해 답하고, "
+                "그 답을 judge 모델이 정답과 대조해 채점합니다.",
+                "실행 중 실시간 정오답 카운트 → 문항별 판정·추론 트레이스 → 종합·난이도별 집계 "
+                "→ 결과 JSON 다운로드.",
+                "각 문항이 RLM 전체 실행 + judge 1회라 문항 수에 비례해 시간·비용이 듭니다.",
+            ],
+        )
 
 
 if __name__ == "__main__":

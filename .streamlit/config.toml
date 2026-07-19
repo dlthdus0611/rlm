@@ -1,7 +1,27 @@
 # 앱 전역 테마 — base·배경/글자색은 지정하지 않아 사용자 기본(설정값/시스템) 테마를 따른다.
-# 액센트 컬러·둥근 모서리·테두리만 다듬는다(Streamlit 네이티브 테마라 겹침 위험 없음).
+# 액센트 컬러·둥근 모서리·테두리 + 한글 전용 폰트(Pretendard)만 다듬는다.
+# 폰트는 Streamlit 네이티브 fontFaces로 심어 CSS @import 없이 안전하게 적용된다(겹침 위험 없음).
 [theme]
-primaryColor = "#8B5CF6"      # 보라 액센트 (버튼·포커스·프로그레스·링크)
-baseRadius = "large"          # 위젯·카드 모서리 둥글게
-borderColor = "#8884"         # 반투명 회색 — 다크/라이트 양쪽에서 은은한 테두리
+primaryColor = "#8B5CF6"          # 보라 액센트 (버튼·포커스·프로그레스·링크)
+baseRadius = "large"              # 위젯·카드 모서리 둥글게
+borderColor = "#8884"             # 반투명 회색 — 다크/라이트 양쪽에서 은은한 테두리
 showSidebarBorder = true
+font = "Pretendard, -apple-system, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif"
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Regular.woff2"
+weight = "400"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-SemiBold.woff2"
+weight = "600"
+style = "normal"
+
+[[theme.fontFaces]]
+family = "Pretendard"
+url = "https://cdn.jsdelivr.net/npm/pretendard@1.3.9/dist/web/static/woff2/Pretendard-Bold.woff2"
+weight = "700"
+style = "normal"

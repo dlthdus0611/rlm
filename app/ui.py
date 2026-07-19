@@ -64,6 +64,20 @@ footer, [data-testid="stStatusWidget"], [data-testid="stToolbar"] {{ visibility:
 .rlm-badge.partial   {{ background: #f59e0b22; color: #f59e0b; }}
 .rlm-badge.incorrect {{ background: #ef444422; color: #ef4444; }}
 
+/* API 키 상태 — 컴팩트 알약 */
+.rlm-keybadge {{ display: inline-flex; align-items: center; gap: 6px; white-space: nowrap;
+  font-size: 0.74rem; font-weight: 600; padding: 4px 11px; border-radius: 999px;
+  border: 1px solid color-mix(in srgb, currentColor 35%, transparent); }}
+.rlm-keybadge.ok {{ color: #10b981; background: #10b98118; }}
+.rlm-keybadge.no {{ color: #ef4444; background: #ef444418; }}
+
+/* 빈 상태 안내 카드 */
+.rlm-empty {{ border: 1px dashed color-mix(in srgb, var(--a1) 30%, #88888844);
+  border-radius: 16px; padding: 22px 24px; margin-top: 14px;
+  background: color-mix(in srgb, var(--a1) 4%, transparent); }}
+.rlm-empty b {{ font-size: 0.98rem; }}
+.rlm-empty ul {{ margin: 10px 0 0; padding-left: 18px; opacity: 0.72; font-size: 0.9rem; line-height: 1.7; }}
+
 /* Primary 버튼 그라디언트 */
 .stButton button[kind="primary"], [data-testid="stBaseButton-primary"] {{
   background: linear-gradient(92deg, var(--a1), var(--a2)) !important;
@@ -104,11 +118,20 @@ def verdict_badge(label: str) -> str:
 
 
 def api_key_badge(present: bool) -> None:
-    """사이드바 하단의 API 키 상태 배지."""
+    """사이드바 하단의 API 키 상태 — 컴팩트 알약 배지."""
     if present:
-        st.success("OPENROUTER_API_KEY 감지됨", icon="✅")
+        st.markdown('<span class="rlm-keybadge ok">● API 키 연결됨</span>',
+                    unsafe_allow_html=True)
     else:
-        st.error("OPENROUTER_API_KEY 없음 — .env 또는 환경변수에 설정하세요.", icon="🚫")
+        st.markdown('<span class="rlm-keybadge no">● API 키 없음 · .env 설정 필요</span>',
+                    unsafe_allow_html=True)
+
+
+def empty_state(title: str, items: list) -> None:
+    """실행 전 휑한 화면을 채우는 안내 카드."""
+    lis = "".join(f"<li>{it}</li>" for it in items)
+    st.markdown(f'<div class="rlm-empty"><b>{title}</b><ul>{lis}</ul></div>',
+                unsafe_allow_html=True)
 
 
 def render_trace(entries) -> None:
