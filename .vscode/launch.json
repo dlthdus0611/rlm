@@ -1,0 +1,29 @@
+{
+  // streamlit 앱을 디버거로 실행하는 구성.
+  // streamlit CLI가 아니라 python 진입점으로 띄워야 디버거가 붙고
+  // streamlit_app.py·rlm/ 안의 중단점이 잡힌다.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // 표준 방식: streamlit 모듈을 직접 실행 (별도 파일 불필요).
+      "name": "Streamlit: 앱 디버그",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "streamlit",
+      "args": ["run", "app/streamlit_app.py"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+    {
+      // 대안: 우리 진입점(app/__main__.py)을 통해 실행 (`python -m app`와 동일).
+      "name": "Streamlit: 앱 디버그 (python -m app)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "app",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
