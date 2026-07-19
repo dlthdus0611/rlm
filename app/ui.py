@@ -14,9 +14,9 @@ _THEME_CSS = f"""
 <style>
 :root {{ --a1: {ACCENT_1}; --a2: {ACCENT_2}; }}
 
-/* 크롬 정리 + 중앙 정렬 레이아웃 */
-footer, [data-testid="stStatusWidget"] {{ visibility: hidden; }}
-.block-container {{ padding-top: 2rem; padding-bottom: 4rem; max-width: 1160px; }}
+/* 크롬 정리 + 중앙 정렬 레이아웃 (레이아웃에 영향 없는 상단 우측 툴바/푸터만 숨김) */
+footer, [data-testid="stStatusWidget"], [data-testid="stToolbar"] {{ visibility: hidden; }}
+.block-container {{ padding-top: 2.2rem; padding-bottom: 4rem; max-width: 1160px; }}
 
 /* 히어로 헤더 */
 .rlm-hero {{
