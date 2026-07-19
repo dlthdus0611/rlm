@@ -18,9 +18,13 @@ python3.10 -m venv .venv && source .venv/bin/activate   # Python 3.10+
 pip install -r requirements.txt
 export OPENROUTER_API_KEY=...        # 필수 (openrouter.ai/keys)
 
-streamlit run app/playground.py # 웹: 문서 업로드 후 그 문서로 QA, 추론 과정을 실시간으로
+streamlit run app/playground.py # 웹앱: 문서 업로드→QA 플레이그라운드 + 평가 페이지(사이드바)
+python -m eval --set single --n 10 # CLI 평가: 삼성 사업보고서 QA 테스트셋으로 정확도 측정
 pytest -v                          # 테스트 (네트워크·키 불필요)
 ```
+
+웹앱은 멀티페이지다 — **플레이그라운드**(임의 문서로 추론 과정 관찰)와 **평가 페이지**(`data/`의
+QA 테스트셋을 난이도별로 골라 라이브 실행·채점, 집계·문항별 드릴다운·JSON 다운로드).
 
 ## 메커니즘
 
@@ -35,5 +39,5 @@ pytest -v                          # 테스트 (네트워크·키 불필요)
 
 ## 더 보기
 
-설정(`RLM_ROOT_MODEL`/`RLM_SUB_MODEL`, 기본 `openai/gpt-5.5`·`openai/gpt-5.5-mini` 등)은 `.env.example`,
+설정(`RLM_ROOT_MODEL`/`RLM_SUB_MODEL`, 기본 `openai/gpt-5.6-sol`·`openai/gpt-5.6-luna` 등)은 `.env.example`,
 코드 구조·아키텍처·규약은 [`CLAUDE.md`](./CLAUDE.md), 설계 배경은 `docs/`.
