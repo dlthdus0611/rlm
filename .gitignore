@@ -6,3 +6,5 @@ venv/
 logs/
 .pytest_cache/
 *.egg-info/
+docs/
+data/
