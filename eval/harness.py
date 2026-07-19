@@ -14,6 +14,7 @@ from typing import Optional
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from rlm.graph import build_rlm_graph
+from .prompts import JUDGE_SYSTEM, build_judge_prompt
 
 
 @dataclass
@@ -71,25 +72,7 @@ def select_items(items: list[QAItem], n: Optional[int] = None,
     return pool
 
 
-JUDGE_SYSTEM = (
-    "너는 QA 채점자다. 주어진 '정답'과 '모델답변'이 핵심적으로 일치하는지 판정한다.\n"
-    "- correct: 정답의 핵심 사실과 수치가 모두 일치한다(표현·어순 차이는 무방하나, "
-    "숫자는 반올림·단위까지 일치해야 한다).\n"
-    "- partial: 여러 부분 중 일부만 맞거나, 핵심 수치는 맞지만 요구된 부가정보가 빠졌다.\n"
-    "- incorrect: 틀리거나 핵심이 누락되었거나 답이 없다.\n"
-    '반드시 JSON 한 줄로만 답하라: {"label": "correct|partial|incorrect", "reason": "간단한 이유"}'
-)
-
 _VALID_LABELS = {"correct", "partial", "incorrect"}
-
-
-def _build_judge_prompt(question: str, gold: str, candidate: str) -> str:
-    return (
-        f"[질문]\n{question}\n\n"
-        f"[정답]\n{gold}\n\n"
-        f"[모델답변]\n{candidate}\n\n"
-        "위 모델답변을 정답 기준으로 채점하라."
-    )
 
 
 def _parse_verdict(text: str) -> Optional[Verdict]:
@@ -117,7 +100,7 @@ def judge(question: str, gold: str, candidate: Optional[str], judge_llm) -> Verd
         return Verdict("incorrect", "모델이 답을 제출하지 않음")
     messages = [
         SystemMessage(content=JUDGE_SYSTEM),
-        HumanMessage(content=_build_judge_prompt(question, gold, str(candidate))),
+        HumanMessage(content=build_judge_prompt(question, gold, str(candidate))),
     ]
     text = ""
     for _ in range(2):
