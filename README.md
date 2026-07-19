@@ -24,20 +24,41 @@ LLM은 컨텍스트가 길어질수록 비싸지고 정확도도 떨어진다. *
 python3.10 -m venv .venv && source .venv/bin/activate   # Python 3.10+
 pip install -r requirements.txt
 export OPENROUTER_API_KEY=...        # 필수 (openrouter.ai/keys)
+export OPENAI_API_KEY=...            # RAG 비교를 쓸 때만 (검색 임베딩용)
 
-streamlit run app/playground.py      # 웹앱 (플레이그라운드 + 평가 페이지)
+streamlit run app/playground.py      # 웹앱 (플레이그라운드 · 평가 · 비교 페이지)
 pytest -v                            # 테스트 — 네트워크·키 불필요 (가짜 모델)
 ```
 
-웹앱은 두 페이지로 나뉜다.
+웹앱은 세 페이지로 나뉜다.
 
 - **플레이그라운드** — 아무 문서나 붙여넣고 질문하면, 모델이 그 문서를 `context`로 두고
   코드를 생성·실행하며 답을 찾아가는 과정을 턴별로 보여준다.
 - **평가 페이지** — `data/`에 준비된 QA 테스트셋(삼성 2023 사업보고서 기반)을 난이도별로
   골라 라이브로 돌리고, LLM 채점자가 정답과 대조해 매긴 정확도를 집계로 보여준다.
   같은 평가는 CLI로도 돌릴 수 있다: `python -m eval --set single --n 10`.
+- **비교 페이지** — 같은 문항을 RLM과 벡터 DB 기반 RAG에 나란히 통과시켜 대조한다(아래).
 
 ![평가 페이지 — 테스트셋을 돌려 난이도별 정확도를 집계한다 (예시 데이터)](assets/screenshot-eval.png)
+
+## RLM vs RAG 비교
+
+도입부의 질문 — *코드로 문서를 뒤지는 RLM이 미리 잘라 검색해 두는 RAG보다 실제로 나은가* — 을
+직접 재보는 벤치다. **공정성 계약**으로 "RLM이냐 RAG냐" 한 변수만 다르게 둔다: 같은 문서·같은
+문항·같은 LLM 채점자·같은 생성 모델을 고정하고, **문서에 접근하는 방식만** 다르다 — RLM은 코드로
+전체 문서를 훑고, RAG는 임베딩·벡터 검색으로 top-k 조각만 꺼낸다(HyDE 쿼리 확장·MMR·LLM 리랭킹을
+얹은 강화 RAG). 정확도·비용(토큰)·지연(시간)을 3축으로, 그리고 RAG는 근거적중률(검색 조각이 정답
+근거를 포함했는지)까지 대조한다.
+
+```bash
+export OPENAI_API_KEY=...             # RAG 검색 임베딩용 (추가로 필요)
+python -m eval.compare --systems rlm,rag --set single --n 10
+```
+
+CLI는 시스템별 정확도·평균 토큰·평균 지연·근거적중률을 한 표로 출력하고 결과를 JSON으로 저장한다.
+비교 페이지는 같은 실행을 라이브로 돌려 문항마다 두 시스템의 판정·추론 트레이스·검색 조각을 나란히
+보여준다. 두 시스템은 공통 `Solver` 플러그인 구조(`eval/systems.py`) 위에 얹혀 있어, 세 번째
+전략(예: 전체 문서 통째로 넣기)도 한 줄 등록으로 표에 합류시킬 수 있다.
 
 ## 어떻게 도는가
 

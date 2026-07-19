@@ -20,6 +20,11 @@ pytest -v
 pytest tests/test_graph.py -v                       # 단일 파일
 pytest tests/test_graph.py::test_graph_single_turn_answer -v   # 단일 테스트
 
+# RLM vs RAG 비교 — 같은 문서·테스트셋·judge로 두 시스템을 정확도·비용·지연 3축 대조
+#   (실제 OpenRouter + RAG는 OpenAI 임베딩 호출. OPENROUTER_API_KEY·OPENAI_API_KEY 필요)
+python -m eval.compare --systems rlm,rag --set single --n 10
+python -m eval.compare --systems rlm,rag --set cross --n 5 --question-field question_textbook
+
 # 웹 플레이그라운드 — 문서 업로드 후 그 문서로 QA + 실시간 추론 트레이스 (실제 OpenRouter 호출)
 streamlit run app/playground.py
 
@@ -30,6 +35,7 @@ python -m app
 
 설정(API 키·엔드포인트·기본 모델)은 환경변수로 오버라이드한다 — `OPENROUTER_API_KEY`(필수),
 `OPENROUTER_BASE_URL`, `RLM_ROOT_MODEL`/`RLM_SUB_MODEL`(기본 `openai/gpt-5.6-sol`·`openai/gpt-5.6-luna`).
+RAG 비교를 쓸 때는 `OPENAI_API_KEY`(검색 임베딩용)와 `RAG_*` 파라미터도 환경변수로 읽는다.
 
 ## ⚠️ 보안 — 핵심 제약
 
@@ -100,6 +106,30 @@ streamlit은 스크립트 폴더만 sys.path에 넣으므로 `app/playground.py`
 - `app/__main__.py` — `python -m app` 진입점. streamlit CLI 대신 파이썬 진입점으로
   streamlit을 in-process(`streamlit.web.cli`)로 띄워 디버거를 붙일 수 있게 한다.
   `.vscode/launch.json`이 이 방식(및 `module: streamlit` 표준 방식)을 구성으로 제공.
+
+## RLM vs RAG 비교 벤치
+
+프로젝트 목표(RLM이 기본 RAG보다 실제 효과가 있는지 실증)의 핵심으로, 두 시스템을 **바꿔 끼우는
+플러그인 구조** 위에서 붙인다. **공정성 계약**: 같은 문서(`data/samsung_2023.txt`)·같은 문항
+(`select_items` seed 고정)·같은 judge·같은 생성 모델(RAG 생성기 = RLM `root_model`)을 고정하고,
+**context 접근 전략만** 다르게 둔다 — RLM은 코드로 전체 문서를 훑고, RAG는 top-k passage만 넣는다.
+정확도·비용(토큰)·지연(시간)에 더해 RAG는 근거적중률(검색 passage가 gold `evidence` 포함 여부)을 잰다.
+
+- **공통 플러그인 (`eval/systems.py`)**: `BaseSolver`가 공통 껍데기 — (질문, context)+주입 LLM →
+  계측된 답(토큰·지연·트레이스) — 를 소유한다(`solve()`가 타이머 + `UsageMetadataCallbackHandler`
+  성격의 `_UsageCollector`를 부착). 내부 흐름만 `_run`으로 갈린다: `RlmSolver`(그래프 stream 루프)·
+  `RagSolver`(선형 파이프라인, context 해시로 리트리버 메모이즈). `SYSTEMS` 레지스트리 +
+  `build_solvers()`로 CLI·UI가 시스템을 모른 채 고른다. 3번째(long-context·BM25 등)는 상속+등록 한 줄.
+- **RAG 코어 (`rag/`, `rlm/`과 대칭)**: `embeddings.py`(OpenAI 임베딩 팩토리)·`index.py`(청킹+FAISS,
+  내용·파라미터 해시 디스크 캐시)·`retriever.py`(HyDE→벡터 MMR→LLM 리랭킹, 단계 토글 — 전부 끄면
+  표준 top-k 파생)·`pipeline.py`(검색→단일 생성)·`prompts.py`·`api.py`(공개 진입점, `rlm/api`와 대칭).
+  LLM·임베딩·리트리버는 주입이라 테스트는 `FakeEmbedder`/`FakeStore`/`FakeChat`으로 네트워크 없이 돈다.
+- **비교 하니스 (`eval/compare.py`)**: `run_item`이 한 문항을 등록 solver 전부에 통과시켜 동일 judge로
+  채점, `aggregate_compare`가 시스템×난이도로 집계, `to_compare_payload`가 다운로드 스키마를 만든다.
+  `python -m eval.compare`가 CLI. `recursion_limit_for` 등 기존 harness 로직(`judge`·`select_items`)을 재사용.
+- **비교 UI (`app/compare_run.py` + `app/pages/2_비교.py`)**: `app/eval_run.py`와 대칭인 streamlit
+  비의존 오케스트레이션이 `CompareEvent`를 yield하고, 비교 페이지가 좌우 대조표 + 문항 드릴다운
+  (RLM 추론 트레이스 ↔ RAG 검색 passage)을 `app/ui.py` 컴포넌트로 렌더한다.
 
 ## 한글 프롬프트
 

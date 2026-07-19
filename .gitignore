@@ -9,3 +9,4 @@ logs/
 docs/
 data/
 .claude/
+.rag_cache/

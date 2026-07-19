@@ -1,6 +1,8 @@
 langgraph>=0.2.0
 langchain-openai>=0.2.0
 langchain-core>=0.3.0
+langchain-community>=0.3.0    # RAG 비교: FAISS 벡터스토어 래퍼
+faiss-cpu>=1.8.0              # RAG 비교: 벡터 인덱스
 pydantic-settings>=2.0.0
 python-dotenv>=1.0.0
 streamlit>=1.30
