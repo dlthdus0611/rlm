@@ -2,7 +2,9 @@
 
 긴 문서를 통째로 모델에 넣는 대신, **모델이 코드를 써서 그 문서를 탐색하게** 하면 어떨까?
 RAG처럼 미리 잘라 검색해 두는 방식과는 다른 이 접근이 실제로 통하는지 직접 돌려보고 정확도까지
-재보려는 학습용 토이다. 논문 *"Recursive Language Models"*(arXiv:2512.24601, 원본
+재보려는 학습용 토이다. 
+
+논문 *"Recursive Language Models"*(arXiv:2512.24601, 원본
 repo: alexzhang13/rlm)의 핵심 메커니즘을 LangGraph로 최소한으로 재현했다.
 
 ![플레이그라운드 — 임의의 문서를 넣고 RLM이 푸는 과정을 실시간으로 본다](assets/screenshot-playground.png)
@@ -43,23 +45,19 @@ pytest -v                            # 테스트 — 네트워크·키 불필요
 
 한 번의 실행은 네 조각으로 이뤄진다.
 
-1. **컨텍스트는 핸들로만** — 거대 입력은 REPL 변수 `context`에만 있고, 모델 메시지엔
+1. **컨텍스트는 핸들로만**
+
+   거대 입력은 REPL 변수 `context`에만 있고, 모델 메시지엔
    메타데이터만 간다. 본문이 프롬프트로 새지 않는지는 테스트가 검증한다.
-2. **코드로 다룬다** — 모델이 ```` ```repl ```` 블록을 생성하면 실행하고, 그 stdout만
+3. **코드로 다룬다**
+
+   모델이 ```` ```repl ```` 블록을 생성하면 실행하고, 그 stdout만
    되돌려준다. 모델은 그걸 보고 다음 코드를 정한다.
-3. **재귀 sub-call** — `llm_query`로 조각을 위임하거나, `rlm_query`로 depth+1 재귀
+6. **재귀 sub-call**
+
+   `llm_query`로 조각을 위임하거나, `rlm_query`로 depth+1 재귀
    호출한다(깊이 한도를 넘으면 단순 위임으로 폴백).
-4. **축약과 종료** — REPL 출력은 8K자로 축약하고, 모델이 `answer["ready"] = True`를
+8. **축약과 종료**
+
+   REPL 출력은 8K자로 축약하고, 모델이 `answer["ready"] = True`를
    세팅하면 그 답을 최종 제출로 본다.
-
-## ⚠️ 보안
-
-모델이 생성한 Python 코드를 **in-process `exec()`로 그대로 실행한다**(샌드박스 없음).
-원본 repo의 docker/e2b 샌드박스를 의도적으로 단순화한 것이니, 신뢰할 수 있는 입력과 본인
-머신에서만 쓸 것.
-
-## 더 보기
-
-모델·엔드포인트 설정(`RLM_ROOT_MODEL`/`RLM_SUB_MODEL`, 기본 `openai/gpt-5.6-sol`·
-`openai/gpt-5.6-luna`)은 [`.env.example`](./.env.example)에, 코드 구조·아키텍처·규약은
-[`CLAUDE.md`](./CLAUDE.md)에, 설계 배경 문서는 `docs/`에 있다.
