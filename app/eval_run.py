@@ -9,9 +9,14 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Iterator, Optional
 
-from rlm.graph import build_rlm_graph
+from rlm.graph import build_rlm_graph, recursion_limit_for
 from app.trace import format_update
-from eval.harness import QAItem, EvalResult, Verdict, judge, aggregate
+# to_payload은 eval 계층(harness)에 있고, 여기서 재노출해 페이지가 한 곳에서 import하게 한다.
+from eval.harness import (
+    QAItem, EvalResult, Verdict, judge, aggregate, question_of, to_payload,
+)
+
+__all__ = ["EvalEvent", "run_eval_stream", "to_payload"]
 
 
 @dataclass
@@ -32,17 +37,18 @@ def run_eval_stream(items, context, root_llm, sub_llm, judge_llm, *,
     문항마다: trace(여러 개) → item_done. 전 문항 후: run_done(aggregate).
     문항 단위 예외는 잡아 EvalResult.error에 담고 계속한다(run_one과 동일 정책).
     """
+    # 그래프는 문항 간 상태를 갖지 않으므로(문항마다 setup에서 새 REPL) 한 번만 컴파일해 재사용한다.
+    graph = build_rlm_graph(root_llm, sub_llm, max_depth, max_iterations)
+    config = {"recursion_limit": recursion_limit_for(max_iterations)}
     results: list[EvalResult] = []
     for item in items:
-        question = getattr(item, question_field, "") or item.question
+        question = question_of(item, question_field)
         final_answer = None
         turn = 0
         try:
-            graph = build_rlm_graph(root_llm, sub_llm, max_depth, max_iterations)
             for update in graph.stream(
                 {"question": question, "context": context, "depth": 0},
-                config={"recursion_limit": 2 * max_iterations + 10},
-                stream_mode="updates",
+                config=config, stream_mode="updates",
             ):
                 entries, turn, maybe_final = format_update(update, turn)
                 if entries:
@@ -52,29 +58,9 @@ def run_eval_stream(items, context, root_llm, sub_llm, judge_llm, *,
         except Exception as exc:  # noqa: BLE001 - 문항 단위 실패는 기록하고 계속
             result = EvalResult(item, None, turn, Verdict("incorrect", "실행 오류"),
                                 error=str(exc))
-            results.append(result)
-            yield EvalEvent("item_done", item=item, result=result)
-            continue
-        verdict = judge(question, item.answer, final_answer, judge_llm)
-        result = EvalResult(item, final_answer, turn, verdict)
+        else:
+            verdict = judge(question, item.answer, final_answer, judge_llm)
+            result = EvalResult(item, final_answer, turn, verdict)
         results.append(result)
         yield EvalEvent("item_done", item=item, result=result)
     yield EvalEvent("run_done", aggregate=aggregate(results), results=results)
-
-
-def to_payload(config: dict, agg: dict, results, question_field: str) -> dict:
-    """다운로드용 JSON payload. runner.py의 저장 구조와 동일하게 맞춘다."""
-    return {
-        "config": config,
-        "aggregate": agg,
-        "results": [
-            {
-                "id": r.item.id, "difficulty": r.item.difficulty,
-                "question": getattr(r.item, question_field, "") or r.item.question,
-                "gold": r.item.answer, "model_answer": r.model_answer,
-                "turns": r.turns, "label": r.verdict.label,
-                "reason": r.verdict.reason, "error": r.error,
-            }
-            for r in results
-        ],
-    }

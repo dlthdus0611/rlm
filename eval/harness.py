@@ -13,8 +13,14 @@ from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from rlm.graph import build_rlm_graph
+from rlm.graph import build_rlm_graph, recursion_limit_for
 from .prompts import JUDGE_SYSTEM, build_judge_prompt
+
+
+def question_of(item, question_field: str) -> str:
+    """문항의 질문 텍스트 — 지정 필드('대충질문' question / '정석' question_textbook)를
+    쓰되, 비었으면 기본 question으로 폴백한다."""
+    return getattr(item, question_field, "") or item.question
 
 
 @dataclass
@@ -120,12 +126,12 @@ def run_one(item: QAItem, context: str, root_llm, sub_llm, judge_llm,
     question_field로 '대충질문'(question) vs '정석'(question_textbook)을 선택.
     실행 예외는 잡아 EvalResult.error에 담는다(배치 계속).
     """
-    question = getattr(item, question_field, "") or item.question
+    question = question_of(item, question_field)
     try:
         graph = build_rlm_graph(root_llm, sub_llm, max_depth, max_iterations)
         state = graph.invoke(
             {"question": question, "context": context, "depth": 0},
-            config={"recursion_limit": 2 * max_iterations + 10},
+            config={"recursion_limit": recursion_limit_for(max_iterations)},
         )
     except Exception as exc:  # noqa: BLE001 - 문항 단위 실패는 기록하고 계속
         return EvalResult(item, None, 0, Verdict("incorrect", "실행 오류"), error=str(exc))
@@ -158,3 +164,25 @@ def aggregate(results: list[EvalResult]) -> dict:
         if subset:
             by_difficulty[diff] = _bucket(subset)
     return {"overall": _bucket(results), "by_difficulty": by_difficulty}
+
+
+def to_payload(config: dict, agg: dict, results) -> dict:
+    """저장/다운로드용 JSON payload. CLI(runner)와 UI(평가 페이지)가 공유하는 단일 스키마.
+
+    질문 텍스트에 쓸 필드는 config["question_field"]에서 파생한다(없으면 'question').
+    """
+    question_field = config.get("question_field", "question")
+    return {
+        "config": config,
+        "aggregate": agg,
+        "results": [
+            {
+                "id": r.item.id, "difficulty": r.item.difficulty,
+                "question": question_of(r.item, question_field),
+                "gold": r.item.answer, "model_answer": r.model_answer,
+                "turns": r.turns, "label": r.verdict.label,
+                "reason": r.verdict.reason, "error": r.error,
+            }
+            for r in results
+        ],
+    }

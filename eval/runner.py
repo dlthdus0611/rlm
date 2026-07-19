@@ -15,16 +15,10 @@ from dotenv import load_dotenv
 from rlm.config import get_settings
 from rlm.llm import make_llm
 
-from .harness import aggregate, load_testset, run_one, select_items
+from .datasets import CONTEXT_PATH, TESTSETS as SETS
+from .harness import aggregate, load_testset, run_one, select_items, to_payload
 
 load_dotenv()
-
-SETS = {
-    "single": ["data/qa_testset.json"],
-    "cross": ["data/qa_crosssection.json"],
-    "both": ["data/qa_testset.json", "data/qa_crosssection.json"],
-}
-CONTEXT_PATH = "data/samsung_2023.txt"
 
 
 def _print_summary(agg: dict) -> None:
@@ -91,25 +85,15 @@ def main() -> None:
     agg = aggregate(results)
     _print_summary(agg)
 
-    payload = {
-        "config": {
+    payload = to_payload(
+        {
             "set": args.set, "n": args.n, "seed": args.seed,
             "difficulty": args.difficulty, "question_field": args.question_field,
             "root_model": root_model, "sub_model": sub_model, "judge_model": judge_model,
             "max_iterations": args.max_iterations, "max_depth": args.max_depth,
         },
-        "aggregate": agg,
-        "results": [
-            {
-                "id": r.item.id, "difficulty": r.item.difficulty,
-                "question": getattr(r.item, args.question_field, "") or r.item.question,
-                "gold": r.item.answer, "model_answer": r.model_answer,
-                "turns": r.turns, "label": r.verdict.label,
-                "reason": r.verdict.reason, "error": r.error,
-            }
-            for r in results
-        ],
-    }
+        agg, results,
+    )
     with open(args.out, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
     print(f"\n결과 저장: {args.out}")

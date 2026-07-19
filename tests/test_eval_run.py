@@ -100,8 +100,9 @@ def test_to_payload_shape_matches_runner():
     item = _item("Q1")
     results = [EvalResult(item, "정답 42", 2, Verdict("correct", "ok"))]
     agg = {"overall": {"total": 1}, "by_difficulty": {}}
-    payload = to_payload({"set": "single"}, agg, results, "question")
-    assert payload["config"] == {"set": "single"}
+    config = {"set": "single", "question_field": "question"}
+    payload = to_payload(config, agg, results)
+    assert payload["config"] == config
     assert payload["aggregate"] == agg
     row = payload["results"][0]
     assert row["id"] == "Q1"
@@ -112,9 +113,9 @@ def test_to_payload_shape_matches_runner():
     assert row["error"] is None
 
 
-def test_to_payload_uses_question_field():
+def test_to_payload_uses_question_field_from_config():
     item = QAItem(id="Q1", difficulty="low", question="대충", answer="a",
                   question_textbook="정석질문")
     results = [EvalResult(item, "a", 1, Verdict("correct"))]
-    payload = to_payload({}, {}, results, "question_textbook")
+    payload = to_payload({"question_field": "question_textbook"}, {}, results)
     assert payload["results"][0]["question"] == "정석질문"

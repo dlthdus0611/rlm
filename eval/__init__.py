@@ -6,9 +6,12 @@ runner는 실제 OpenRouter 호출 CLI(`python -m eval`).
 from .harness import (
     QAItem, Verdict, EvalResult,
     load_testset, select_items, judge, run_one, aggregate,
+    question_of, to_payload,
 )
+from .datasets import CONTEXT_PATH, TESTSETS
 
 __all__ = [
     "QAItem", "Verdict", "EvalResult",
     "load_testset", "select_items", "judge", "run_one", "aggregate",
+    "question_of", "to_payload", "CONTEXT_PATH", "TESTSETS",
 ]

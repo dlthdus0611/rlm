@@ -58,8 +58,9 @@ python -m app
 - **출력 축약 (`rlm/parsing.py`)**: REPL stdout은 `_truncate`로 8000자 제한(원본 ~20K 단순화).
   `parse_code_blocks`는 응답에서 ```repl ... ``` 블록만 정규식으로 추출한다.
 - **재귀 한도**: LangGraph 기본 step 상한(25)을 넘기지 않도록 `recursion_limit`을
-  `2 * max_iterations + 10`으로 잡는다. `api.run()`과 `graph.py` 양쪽에 같은 공식이 있다 —
-  `max_iterations` 관련 변경 시 두 곳을 함께 맞출 것.
+  `2 * max_iterations + 10`으로 잡는다. 이 공식은 `rlm/graph.py`의 `recursion_limit_for()`
+  **한 곳**에만 있고 `api.run()`·`eval/harness.py`·`app/eval_run.py`·`app/playground.py`가
+  모두 이를 호출한다 — 상한을 바꾸려면 이 함수만 고치면 된다.
 
 ## LLM 경계와 테스트 전략
 

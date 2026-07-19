@@ -15,6 +15,15 @@ from .prompts import (
 BATCH_CONCURRENCY = 8
 
 
+def recursion_limit_for(max_iterations: int) -> int:
+    """LangGraph invoke/stream의 recursion_limit(노드 스텝 상한).
+
+    setup(1) + max_iterations*(call_model + execute_code) + 여유. LangGraph 기본값 25를
+    넘기지 않도록 잡는다. graph/api/harness/eval_run 등 모든 호출부가 이 한 함수를 쓴다.
+    """
+    return 2 * max_iterations + 10
+
+
 class RLMState(TypedDict, total=False):
     question: str
     context: str
@@ -30,9 +39,7 @@ def build_rlm_graph(root_llm, sub_llm, max_depth: int = 1, max_iterations: int =
 
     root_llm / sub_llm 은 .invoke(...)/.batch(...) 를 가진 Runnable(또는 가짜 객체).
     """
-    # 한 번의 invoke 동안 실행되는 노드 스텝 수 상한(LangGraph 기본값 25를 넘기지 않도록).
-    # setup(1) + max_iterations*(call_model + execute_code) + 여유.
-    _recursion_limit = 2 * max_iterations + 10
+    _recursion_limit = recursion_limit_for(max_iterations)
 
     def _llm_query(prompt: str) -> str:
         return sub_llm.invoke(prompt).content

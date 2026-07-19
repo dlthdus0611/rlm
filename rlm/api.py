@@ -1,7 +1,7 @@
 from typing import Optional
 
 from .config import get_settings
-from .graph import build_rlm_graph
+from .graph import build_rlm_graph, recursion_limit_for
 from .llm import make_llm
 
 
@@ -26,6 +26,6 @@ def run(
     )
     result = graph.invoke(
         {"question": question, "context": context, "depth": 0},
-        config={"recursion_limit": 2 * max_iterations + 10},
+        config={"recursion_limit": recursion_limit_for(max_iterations)},
     )
     return result.get("final_answer")

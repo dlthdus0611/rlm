@@ -17,27 +17,30 @@ from dotenv import load_dotenv
 
 from app import ui
 from app.eval_run import run_eval_stream, to_payload
-from eval.harness import load_testset, select_items
+from eval.datasets import CONTEXT_PATH, TESTSETS
+from eval.harness import load_testset, question_of, select_items
 from rlm import make_llm
 from rlm.config import get_settings
 
 load_dotenv()
 
+# 공유 경로(eval.datasets) 위에 화면용 표시 라벨만 얹는다: 표시명 → 짧은 이름.
 SETS = {
-    "single (qa_testset, 100)": ["data/qa_testset.json"],
-    "cross (qa_crosssection, 30)": ["data/qa_crosssection.json"],
-    "both": ["data/qa_testset.json", "data/qa_crosssection.json"],
+    "single (qa_testset, 100)": "single",
+    "cross (qa_crosssection, 30)": "cross",
+    "both": "both",
 }
-CONTEXT_PATH = "data/samsung_2023.txt"
 _DIFF_ORDER = ["low", "medium", "high", "expert"]
 # 모델 설정은 UI에서 숨기고 환경변수/기본값과 아래 상수를 쓴다.
 MAX_ITERATIONS = 12
 MAX_DEPTH = 1
 
 
+@st.cache_data(show_spinner=False)
 def _load_items(set_label):
+    """테스트셋을 로드한다. set_label(표시명)당 한 번만 파싱하고 이후 rerun은 캐시에서."""
     items = []
-    for p in SETS[set_label]:
+    for p in TESTSETS[SETS[set_label]]:
         items += load_testset(p)
     return items
 
@@ -81,7 +84,7 @@ def _difficulty_table(by_difficulty):
     )
 
 
-def _item_expander(r, cfg, entries):
+def _item_expander(r, question_field, entries):
     """문항 하나의 드릴다운(판정 배지 + 추론 트레이스)."""
     icon = ui.VERDICT_ICON.get(r.verdict.label, "·")
     head = f"{icon}  {r.item.id}  ·  {r.item.difficulty}  ·  turns {r.turns}"
@@ -90,8 +93,7 @@ def _item_expander(r, cfg, entries):
             f'{ui.verdict_badge(r.verdict.label)}'
             f'<span style="opacity:.65"> &nbsp;{r.verdict.reason}</span>',
             unsafe_allow_html=True)
-        q = getattr(r.item, cfg["question_field"], "") or r.item.question
-        st.markdown(f"**질문**  {q}")
+        st.markdown(f"**질문**  {question_of(r.item, question_field)}")
         st.markdown(f"**정답**  {r.item.answer}")
         model_ans = r.model_answer if r.model_answer is not None else "_(미제출)_"
         st.markdown(f"**모델답**  {model_ans}")
@@ -117,7 +119,6 @@ def _run(items, context, cfg):
     st.subheader("문항별 결과")
     done = 0
     traces = {}   # item.id -> 누적 TraceEntry
-    results = []
 
     for ev in run_eval_stream(
         items, context, root_llm, sub_llm, judge_llm,
@@ -128,12 +129,11 @@ def _run(items, context, cfg):
             traces.setdefault(ev.item.id, []).extend(ev.entries)
         elif ev.kind == "item_done":
             r = ev.result
-            results.append(r)
             counts[r.verdict.label] += 1
             done += 1
             progress.progress(done / total, text=f"{done}/{total} 채점 중")
             _render_live(live, counts, done, total)
-            _item_expander(r, cfg, traces.get(r.item.id, []))
+            _item_expander(r, cfg["question_field"], traces.get(r.item.id, []))
         elif ev.kind == "run_done":
             progress.progress(1.0, text=f"{total}/{total} 완료 🎉")
             st.divider()
@@ -141,7 +141,7 @@ def _run(items, context, cfg):
             _render_summary(ev.aggregate["overall"])
             _difficulty_table(ev.aggregate["by_difficulty"])
 
-            payload = to_payload(cfg, ev.aggregate, ev.results, cfg["question_field"])
+            payload = to_payload(cfg, ev.aggregate, ev.results)
             st.download_button(
                 "결과 JSON 다운로드", json.dumps(payload, ensure_ascii=False, indent=2),
                 file_name="eval_results.json", mime="application/json",

@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from app import ui
 from app.trace import format_update
-from rlm import build_rlm_graph, make_llm
+from rlm import build_rlm_graph, make_llm, recursion_limit_for
 from rlm.config import get_settings
 
 load_dotenv()
@@ -38,7 +38,7 @@ def _run_rlm(context, question, root_model, sub_model, max_depth, max_iterations
     try:
         for update in graph.stream(
             {"question": question, "context": context, "depth": 0},
-            config={"recursion_limit": 2 * max_iterations + 10},
+            config={"recursion_limit": recursion_limit_for(max_iterations)},
             stream_mode="updates",
         ):
             entries, turn, maybe_final = format_update(update, turn)
