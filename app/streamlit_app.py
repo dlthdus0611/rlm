@@ -15,6 +15,7 @@ if _ROOT not in sys.path:
 import streamlit as st
 from dotenv import load_dotenv
 
+from app import ui
 from app.app_trace import format_update
 from rlm import build_rlm_graph, make_llm
 from rlm.config import get_settings
@@ -41,43 +42,25 @@ def _run_rlm(context, question, root_model, sub_model, max_depth, max_iterations
             stream_mode="updates",
         ):
             entries, turn, maybe_final = format_update(update, turn)
-            for e in entries:
-                if e.kind == "model":
-                    with st.chat_message("assistant"):
-                        st.markdown(f"**🧠 턴 {e.turn}**")
-                        if e.text:
-                            st.markdown(e.text)
-                        for block in e.code_blocks:
-                            st.code(block, language="python")
-                elif e.kind == "exec":
-                    with st.chat_message("user"):
-                        st.markdown(f"**💻 턴 {e.turn} 실행 결과**")
-                        st.code(e.text or "(출력 없음)")
+            ui.render_trace(entries)
             if maybe_final is not None:
                 final_answer = maybe_final
     except Exception as e:  # noqa: BLE001 - 데모이므로 오류를 화면에 그대로 노출
         st.exception(e)
         return
 
+    st.divider()
     st.subheader("결과")
     if final_answer is None:
-        st.info("최종 답이 제출되지 않았습니다(턴 소진). max_iterations를 늘려보세요.")
+        st.info("최종 답이 제출되지 않았습니다(턴 소진). max_iterations를 늘려보세요.", icon="⏱️")
         return
-    st.success(f"모델 답: {final_answer}")
+    st.success(f"**모델 답**  {final_answer}", icon="🎯")
 
 
 def main():
-    st.set_page_config(page_title="RLM 플레이그라운드", page_icon="🧠", layout="wide")
-    st.title("🧠 Recursive Language Model 플레이그라운드")
-    st.caption(
-        "임의의 긴 context와 질문을 넣으면, 모델이 context를 REPL 변수로만 두고 "
-        "코드를 생성·실행하며 답을 쌓아 올립니다. 그 과정을 턴별로 보여줍니다."
-    )
-    st.warning(
-        "모델이 생성한 Python 코드를 in-process `exec()`로 실행합니다(샌드박스 없음). "
-        "신뢰할 수 있는 입력·본인 머신에서만 사용하세요.",
-        icon="⚠️",
-    )
+    ui.page_header("🧠", "Recursive Language Model 플레이그라운드",
+                   "긴 context를 REPL 변수로만 두고, 모델이 코드를 생성·실행하며 답을 쌓는 과정을 턴별로 봅니다.")
+    ui.security_note()
 
     st.session_state.setdefault("context", "")
     st.session_state.setdefault("question", "")
@@ -89,12 +72,10 @@ def main():
         st.header("설정")
         max_iterations = st.slider("max_iterations", 4, 20, 12)
         max_depth = st.slider("max_depth", 0, 2, 1)
-        root_model = st.text_input("root 모델", settings.rlm_root_model)
-        sub_model = st.text_input("sub 모델", settings.rlm_sub_model)
-        if api_key_present:
-            st.success("OPENROUTER_API_KEY 감지됨")
-        else:
-            st.error("OPENROUTER_API_KEY 없음 — .env 또는 환경변수에 설정하세요.")
+        with st.expander("모델 설정"):
+            root_model = st.text_input("root 모델", settings.rlm_root_model)
+            sub_model = st.text_input("sub 모델", settings.rlm_sub_model)
+        ui.api_key_badge(api_key_present)
 
     uploaded = st.file_uploader(
         "context 파일 업로드(텍스트)", type=["txt", "md", "csv", "json", "log"]
@@ -104,12 +85,12 @@ def main():
 
     context = st.text_area("context", key="context", height=240)
     st.caption(
-        f"context 길이: {len(context)}자 — 모델에게는 이 길이 등 메타데이터만 전달됩니다."
+        f"context 길이: {len(context):,}자 — 모델에게는 이 길이 등 메타데이터만 전달됩니다."
     )
     question = st.text_area("질문(question)", key="question", height=100)
 
-    run_clicked = st.button("▶ RLM 실행", type="primary", disabled=not api_key_present)
-    if run_clicked:
+    if st.button("▶ RLM 실행", type="primary", disabled=not api_key_present,
+                 use_container_width=True):
         if not context.strip() or not question.strip():
             st.warning("context와 질문을 모두 입력하세요.")
             return
