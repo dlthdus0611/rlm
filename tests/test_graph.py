@@ -11,7 +11,7 @@ class FakeChat:
         self.i = 0
         self.invocations = []
 
-    def invoke(self, messages):
+    def invoke(self, messages, config=None):
         self.invocations.append(messages)
         idx = min(self.i, len(self.responses) - 1)
         self.i += 1
