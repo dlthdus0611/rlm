@@ -86,6 +86,14 @@ streamlit은 스크립트 폴더만 sys.path에 넣으므로 `app/streamlit_app.
   QA 플레이그라운드. `graph.stream(stream_mode="updates")`로 턴별 생성 코드/REPL 출력을 실시간 렌더.
 - `app/app_trace.py` — 스트림 업데이트를 화면용 `TraceEntry`로 바꾸는 **streamlit 비의존 순수 함수**.
   `tests/test_app_trace.py`로 검증(네트워크·streamlit 없이).
+- `app/pages/1_평가.py` — 멀티페이지 **평가 페이지**. `data/`의 QA 테스트셋을 테스트셋·난이도·
+  문항 수로 골라 라이브로 실행하면 진행 표시와 함께 집계표·문항별 드릴다운(판정+추론 트레이스)을
+  렌더하고 결과를 JSON으로 내려받는다. streamlit이 `app/pages/`를 자동 인식하며, 여기서도 상단에서
+  루트를 sys.path에 추가한다.
+- `app/eval_run.py` — 문항별로 그래프를 stream하며 트레이스를 뽑고 `harness.judge`로 채점해
+  `EvalEvent`(`trace`/`item_done`/`run_done`)를 yield하는 **streamlit 비의존 순수 오케스트레이션**
+  (`app_trace`와 대칭). `to_payload`는 `eval/runner.py`와 동일한 다운로드 구조를 만든다.
+  `tests/test_eval_run.py`로 가짜 모델(FakeChat/FakeSub/FakeJudge) 검증(네트워크 없이).
 - `app/__main__.py` — `python -m app` 진입점. streamlit CLI 대신 파이썬 진입점으로
   streamlit을 in-process(`streamlit.web.cli`)로 띄워 디버거를 붙일 수 있게 한다.
   `.vscode/launch.json`이 이 방식(및 `module: streamlit` 표준 방식)을 구성으로 제공.
