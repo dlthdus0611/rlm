@@ -36,10 +36,15 @@ def run_item(item, context, solvers, judge_llm, question_field) -> dict:
     for s in solvers:
         out = s.solve(q, context)
         verdict = judge(q, item.answer, out.answer, judge_llm)
+        passages = out.extra.get("passages", [])
         per[s.name] = {
             "label": verdict.label, "reason": verdict.reason,
             "answer": out.answer, "usage": out.usage, "latency_s": out.latency_s,
-            "evidence_hit": _evidence_hit(out.extra.get("passages", []), evidence),
+            "evidence_hit": _evidence_hit(passages, evidence),
+            # UI 드릴다운용(메모리 전용) — to_compare_payload는 아래를 싣지 않아 JSON은 lean.
+            "trace": out.trace,
+            "passages": [getattr(p, "text", "") for p in passages],
+            "error": out.extra.get("error"),
         }
     return {"item": item, "per_system": per}
 
