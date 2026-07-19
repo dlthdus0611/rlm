@@ -33,6 +33,8 @@ class QAItem:
     section: str = ""                              # 단일섹션 테스트셋
     sections: list = field(default_factory=list)   # 교차 종합형 테스트셋
     question_textbook: str = ""
+    evidence: list = field(default_factory=list)   # 정답 근거 문자열(단일섹션)
+    components: list = field(default_factory=list)  # 교차형: {fact,value,section,evidence}
 
 
 @dataclass
@@ -65,8 +67,19 @@ def load_testset(path: str) -> list[QAItem]:
             section=d.get("section", ""),
             sections=d.get("sections", []),
             question_textbook=d.get("question_textbook", ""),
+            evidence=d.get("evidence", []),
+            components=d.get("components", []),
         ))
     return items
+
+
+def gold_evidence(item) -> list[str]:
+    """문항의 정답 근거 문자열 목록(단일=evidence, 교차=components의 evidence)."""
+    ev = list(getattr(item, "evidence", []) or [])
+    for comp in getattr(item, "components", []) or []:
+        if isinstance(comp, dict) and comp.get("evidence"):
+            ev.append(comp["evidence"])
+    return ev
 
 
 def select_items(items: list[QAItem], n: Optional[int] = None,
