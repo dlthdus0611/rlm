@@ -21,10 +21,10 @@ pytest tests/test_graph.py -v                       # 단일 파일
 pytest tests/test_graph.py::test_graph_single_turn_answer -v   # 단일 테스트
 
 # 웹 플레이그라운드 — 문서 업로드 후 그 문서로 QA + 실시간 추론 트레이스 (실제 OpenRouter 호출)
-streamlit run app/streamlit_app.py
+streamlit run app/playground.py
 
 # 디버거로 띄우기 — VS Code는 .vscode/launch.json의 "Streamlit: 앱 디버그" 실행,
-# 터미널/기타 디버거는 아래 진입점 사용 (streamlit_app.py·rlm/ 중단점이 잡힌다)
+# 터미널/기타 디버거는 아래 진입점 사용 (playground.py·rlm/ 중단점이 잡힌다)
 python -m app
 ```
 
@@ -79,20 +79,22 @@ OpenRouter 경유 `ChatOpenAI`)로 격리돼 있고, `rlm/api.py`의 `run()`이 
 ## UI (`app/`)
 
 UI는 `app/` 패키지(응용 계층, `eval/`과 대칭)에 모여 있고 코어 `rlm`을 소비한다.
-streamlit은 스크립트 폴더만 sys.path에 넣으므로 `app/streamlit_app.py` 상단에서 프로젝트
+streamlit은 스크립트 폴더만 sys.path에 넣으므로 `app/playground.py` 상단에서 프로젝트
 루트를 sys.path에 추가한다 — 이게 없으면 `streamlit run`에서 `rlm`/`app` import가 깨진다.
 
-- `app/streamlit_app.py` — 문서(텍스트)를 업로드하면 그 문서를 context로 두고 질문에 답하는
-  QA 플레이그라운드. `graph.stream(stream_mode="updates")`로 턴별 생성 코드/REPL 출력을 실시간 렌더.
-- `app/app_trace.py` — 스트림 업데이트를 화면용 `TraceEntry`로 바꾸는 **streamlit 비의존 순수 함수**.
-  `tests/test_app_trace.py`로 검증(네트워크·streamlit 없이).
+- `app/playground.py` — 문서(텍스트)를 업로드하면 그 문서를 context로 두고 질문에 답하는
+  QA 플레이그라운드(멀티페이지 진입점). `graph.stream(stream_mode="updates")`로 턴별 생성 코드/REPL 출력을 실시간 렌더.
+- `app/trace.py` — 스트림 업데이트를 화면용 `TraceEntry`로 바꾸는 **streamlit 비의존 순수 함수**.
+  `tests/test_trace.py`로 검증(네트워크·streamlit 없이).
+- `app/ui.py` — 공용 UI 디자인 시스템(그라디언트 히어로·스탯 카드·판정 배지·트레이스 렌더러).
+  두 페이지가 같은 룩을 쓰게 하고, 시스템 다크/라이트를 자동 추종한다(`.streamlit/config.toml` 테마).
 - `app/pages/1_평가.py` — 멀티페이지 **평가 페이지**. `data/`의 QA 테스트셋을 테스트셋·난이도·
   문항 수로 골라 라이브로 실행하면 진행 표시와 함께 집계표·문항별 드릴다운(판정+추론 트레이스)을
   렌더하고 결과를 JSON으로 내려받는다. streamlit이 `app/pages/`를 자동 인식하며, 여기서도 상단에서
   루트를 sys.path에 추가한다.
 - `app/eval_run.py` — 문항별로 그래프를 stream하며 트레이스를 뽑고 `harness.judge`로 채점해
   `EvalEvent`(`trace`/`item_done`/`run_done`)를 yield하는 **streamlit 비의존 순수 오케스트레이션**
-  (`app_trace`와 대칭). `to_payload`는 `eval/runner.py`와 동일한 다운로드 구조를 만든다.
+  (`trace`와 대칭). `to_payload`는 `eval/runner.py`와 동일한 다운로드 구조를 만든다.
   `tests/test_eval_run.py`로 가짜 모델(FakeChat/FakeSub/FakeJudge) 검증(네트워크 없이).
 - `app/__main__.py` — `python -m app` 진입점. streamlit CLI 대신 파이썬 진입점으로
   streamlit을 in-process(`streamlit.web.cli`)로 띄워 디버거를 붙일 수 있게 한다.

@@ -1,6 +1,6 @@
 """RLM 평가 페이지 — data/의 QA 테스트셋을 골라 라이브로 실행·채점한다.
 
-멀티페이지: streamlit이 app/pages/를 자동 인식한다. 메인은 streamlit_app.py(플레이그라운드).
+멀티페이지: streamlit이 app/pages/를 자동 인식한다. 메인은 playground.py(플레이그라운드).
 ⚠️ 실제 OpenRouter 호출 + 모델 생성 코드를 in-process exec()로 실행(샌드박스 없음). 신뢰 환경 한정.
 """
 import json

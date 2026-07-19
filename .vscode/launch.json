@@ -1,7 +1,7 @@
 {
   // streamlit 앱을 디버거로 실행하는 구성.
   // streamlit CLI가 아니라 python 진입점으로 띄워야 디버거가 붙고
-  // streamlit_app.py·rlm/ 안의 중단점이 잡힌다.
+  // playground.py·rlm/ 안의 중단점이 잡힌다.
   "version": "0.2.0",
   "configurations": [
     {
@@ -10,7 +10,7 @@
       "type": "debugpy",
       "request": "launch",
       "module": "streamlit",
-      "args": ["run", "app/streamlit_app.py"],
+      "args": ["run", "app/playground.py"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "justMyCode": true

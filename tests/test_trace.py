@@ -1,6 +1,6 @@
 from langchain_core.messages import AIMessage, HumanMessage
 
-from app.app_trace import format_update, TraceEntry
+from app.trace import format_update, TraceEntry
 
 
 def test_call_model_update_extracts_code_and_increments_turn():

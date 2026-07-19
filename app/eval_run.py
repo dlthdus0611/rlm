@@ -1,7 +1,7 @@
 """테스트셋을 문항별로 스트리밍 실행·채점해 화면용 이벤트를 내는 순수 오케스트레이션.
 
-streamlit·네트워크 비의존 — app_trace.py와 대칭. 문항마다 build_rlm_graph().stream()을
-돌려 트레이스를 뽑고(app_trace.format_update), 끝에서 harness.judge로 채점한다.
+streamlit·네트워크 비의존 — trace.py와 대칭. 문항마다 build_rlm_graph().stream()을
+돌려 트레이스를 뽑고(trace.format_update), 끝에서 harness.judge로 채점한다.
 LLM은 .invoke()/.batch()를 가진 Runnable로 주입하므로 FakeChat으로 네트워크 없이 테스트 가능.
 """
 from __future__ import annotations
@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from typing import Iterator, Optional
 
 from rlm.graph import build_rlm_graph
-from app.app_trace import format_update
+from app.trace import format_update
 from eval.harness import QAItem, EvalResult, Verdict, judge, aggregate
 
 

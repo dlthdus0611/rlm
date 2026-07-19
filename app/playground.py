@@ -1,6 +1,6 @@
 """RLM 플레이그라운드 — 임의의 context와 질문을 넣고 RLM이 푸는 과정을 실시간으로 본다.
 
-실행: streamlit run app/streamlit_app.py
+실행: streamlit run app/playground.py
 ⚠️ 모델이 생성한 Python 코드를 in-process exec()로 실행한다(샌드박스 없음). 신뢰 환경 한정.
 """
 import sys
@@ -16,7 +16,7 @@ import streamlit as st
 from dotenv import load_dotenv
 
 from app import ui
-from app.app_trace import format_update
+from app.trace import format_update
 from rlm import build_rlm_graph, make_llm
 from rlm.config import get_settings
 
