@@ -21,8 +21,8 @@ class Settings(BaseSettings):
 
     openrouter_api_key: Optional[str] = None
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
-    rlm_root_model: str = "openai/gpt-5.5"
-    rlm_sub_model: str = "openai/gpt-5.5-mini"
+    rlm_root_model: str = "openai/gpt-5.6-sol"
+    rlm_sub_model: str = "openai/gpt-5.6-luna"
 
 
 def get_settings() -> Settings:

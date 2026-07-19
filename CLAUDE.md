@@ -29,7 +29,7 @@ python -m app
 ```
 
 설정(API 키·엔드포인트·기본 모델)은 환경변수로 오버라이드한다 — `OPENROUTER_API_KEY`(필수),
-`OPENROUTER_BASE_URL`, `RLM_ROOT_MODEL`/`RLM_SUB_MODEL`(기본 `openai/gpt-5.5`·`openai/gpt-5.5-mini`).
+`OPENROUTER_BASE_URL`, `RLM_ROOT_MODEL`/`RLM_SUB_MODEL`(기본 `openai/gpt-5.6-sol`·`openai/gpt-5.6-luna`).
 
 ## ⚠️ 보안 — 핵심 제약
 

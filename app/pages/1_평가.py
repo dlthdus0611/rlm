@@ -139,7 +139,7 @@ def main():
             format_func=lambda k: "대충질문" if k == "question" else "정석")
         root_model = st.text_input("root 모델", settings.rlm_root_model)
         sub_model = st.text_input("sub 모델", settings.rlm_sub_model)
-        judge_model = st.text_input("judge 모델", settings.rlm_root_model)
+        judge_model = st.text_input("judge 모델", settings.rlm_sub_model)
         max_iterations = st.slider("max_iterations", 4, 20, 12)
         max_depth = st.slider("max_depth", 0, 2, 1)
         if api_key_present:

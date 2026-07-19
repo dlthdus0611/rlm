@@ -6,8 +6,8 @@ def test_defaults_when_env_unset(monkeypatch):
         monkeypatch.delenv(var, raising=False)
     s = get_settings()
     assert s.openrouter_base_url == "https://openrouter.ai/api/v1"
-    assert s.rlm_root_model == "openai/gpt-5.5"
-    assert s.rlm_sub_model == "openai/gpt-5.5-mini"
+    assert s.rlm_root_model == "openai/gpt-5.6-sol"
+    assert s.rlm_sub_model == "openai/gpt-5.6-luna"
 
 
 def test_env_overrides_defaults(monkeypatch):

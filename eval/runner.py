@@ -48,7 +48,7 @@ def main() -> None:
                         help="난이도 필터(반복 지정 가능)")
     parser.add_argument("--question-field", choices=["question", "question_textbook"],
                         default="question", help="대충질문 vs 정석")
-    parser.add_argument("--judge-model", default=None, help="채점 모델(기본 root)")
+    parser.add_argument("--judge-model", default=None, help="채점 모델(기본 sub)")
     parser.add_argument("--root-model", default=None)
     parser.add_argument("--sub-model", default=None)
     parser.add_argument("--max-iterations", type=int, default=10)
@@ -62,7 +62,7 @@ def main() -> None:
 
     root_model = args.root_model or settings.rlm_root_model
     sub_model = args.sub_model or settings.rlm_sub_model
-    judge_model = args.judge_model or root_model
+    judge_model = args.judge_model or sub_model
 
     with open(CONTEXT_PATH, encoding="utf-8") as f:
         context = f.read()
