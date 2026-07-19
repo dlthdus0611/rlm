@@ -1,8 +1,8 @@
 """RLM 평가 CLI — 삼성 사업보고서 QA 테스트셋으로 RLM 정답 정확도를 측정한다.
 
 실행 예:
-  python eval_run.py --set single --n 10 --difficulty low --difficulty medium
-  python eval_run.py --set cross --n 5 --question-field question_textbook
+  python -m eval --set single --n 10 --difficulty low --difficulty medium
+  python -m eval --set cross --n 5 --question-field question_textbook
 
 ⚠️ 실제 OpenRouter 호출. .env 또는 환경변수에 OPENROUTER_API_KEY 필요.
 모델이 생성한 코드를 in-process exec()로 실행한다(샌드박스 없음).
@@ -13,8 +13,9 @@ import json
 from dotenv import load_dotenv
 
 from rlm.config import get_settings
-from rlm.eval import aggregate, load_testset, run_one, select_items
 from rlm.llm import make_llm
+
+from .harness import aggregate, load_testset, run_one, select_items
 
 load_dotenv()
 

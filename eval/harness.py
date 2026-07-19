@@ -13,7 +13,7 @@ from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from .graph import build_rlm_graph
+from rlm.graph import build_rlm_graph
 
 
 @dataclass

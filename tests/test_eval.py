@@ -1,6 +1,6 @@
 import json
 
-from rlm.eval import QAItem, load_testset
+from eval.harness import QAItem, load_testset
 
 
 def test_load_testset_single(tmp_path):
@@ -35,7 +35,7 @@ def test_load_testset_cross_uses_sections(tmp_path):
     assert items[0].section == ""
 
 
-from rlm.eval import select_items
+from eval.harness import select_items
 
 
 def _items():
@@ -66,7 +66,7 @@ def test_select_items_n_larger_than_pool_returns_all():
 
 from langchain_core.messages import AIMessage
 
-from rlm.eval import Verdict, judge
+from eval.harness import Verdict, judge
 
 
 class FakeJudge:
@@ -126,7 +126,7 @@ def test_judge_parses_json_with_trailing_object():
     assert j.i == 1
 
 
-from rlm.eval import EvalResult, run_one
+from eval.harness import EvalResult, run_one
 
 
 class FakeChat:
@@ -204,7 +204,7 @@ def test_run_one_uses_question_textbook_field():
     assert "대충질문" not in captured["text"]
 
 
-from rlm.eval import aggregate
+from eval.harness import aggregate
 
 
 def _result(diff, label, turns=2, error=None):
