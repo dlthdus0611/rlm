@@ -156,7 +156,6 @@ def main():
     settings = get_settings()
     api_key_present = bool(settings.openrouter_api_key)
 
-    ui.sidebar_brand("평가")
     with st.sidebar:
         st.header("설정")
         set_label = st.selectbox("테스트셋", list(SETS))

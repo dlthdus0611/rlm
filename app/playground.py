@@ -68,7 +68,6 @@ def main():
     settings = get_settings()
     api_key_present = bool(settings.openrouter_api_key)
 
-    ui.sidebar_brand("플레이그라운드")
     with st.sidebar:
         st.header("설정")
         max_iterations = st.slider("max_iterations", 4, 20, 12)
