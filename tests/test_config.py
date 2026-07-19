@@ -28,6 +28,25 @@ def test_get_settings_reads_env_at_call_time(monkeypatch):
     assert get_settings().rlm_root_model == "second"
 
 
+def test_settings_has_rag_defaults(monkeypatch):
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    s = get_settings()
+    assert s.rag_embed_model == "text-embedding-3-large"
+    assert s.rag_chunk_size == 800
+    assert s.rag_chunk_overlap == 150
+    assert s.rag_top_k == 6
+    assert s.rag_top_n == 24
+    assert s.rag_use_hyde is True
+    assert s.rag_use_rerank is True
+    assert s.rag_cache_dir == ".rag_cache"
+    assert s.openai_api_key is None
+
+
+def test_settings_reads_openai_key_from_env(monkeypatch):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    assert get_settings().openai_api_key == "sk-test"
+
+
 def test_make_llm_uses_env_base_url(monkeypatch):
     # base_url 은 호출 시점에 Settings 를 거쳐 읽혀야 한다(import 시점 고정이 아니라).
     from rlm.llm import make_llm
